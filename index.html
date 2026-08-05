@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FX AI Tool</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #111827;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1f2937;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .notice {
+      background: #374151;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    select,
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #4b5563;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      background: #06b6d4;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0891b2;
+    }
+
+    .result {
+      display: none;
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 14px;
+      background: #111827;
+    }
+
+    .signal {
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 9px 0;
+      border-bottom: 1px solid #374151;
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .entry-ok {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #064e3b;
+      color: #a7f3d0;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .entry-wait {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 10px;
+      background: #78350f;
+      color: #fde68a;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .warning {
+      margin-top: 18px;
+      font-size: 12px;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>📈 FX AI Tool</h1>
+
+      <div class="notice">
+        通貨ペアと現在価格を入力すると、試作ロジックで
+        売買方向・勝率・エントリー・利確・損切りを表示します。
+      </div>
+
+      <label for="pair">通貨ペア</label>
+      <select id="pair">
+        <option value="AUDJPY">AUD/JPY</option>
+        <option value="CADJPY">CAD/JPY</option>
+        <option value="NZDJPY">NZD/JPY</option>
+        <option value="USDJPY">USD/JPY</option>
+      </select>
+
+      <label for="price">現在価格</label>
+      <input
+        id="price"
+        type="number"
+        step="0.001"
+        placeholder="例：102.350"
+      >
+
+      <label for="trend">現在の流れ</label>
+      <select id="trend">
+        <option value="up">上昇傾向</option>
+        <option value="down">下落傾向</option>
+        <option value="range">方向感なし</option>
+      </select>
+
+      <button onclick="analyze()">分析する</button>
+
+      <div id="result" class="result">
+        <div id="signal" class="signal"></div>
+
+        <div class="row">
+          <span>通貨ペア</span>
+          <strong id="resultPair"></strong>
+        </div>
+
+        <div class="row">
+          <span>推定勝率</span>
+          <strong id="winRate"></strong>
+        </div>
+
+        <div class="row">
+          <span>エントリー</span>
+          <strong id="entry"></strong>
+        </div>
+
+        <div class="row">
+          <span>利確</span>
+          <strong id="takeProfit"></strong>
+        </div>
+
+        <div class="row">
+          <span>損切り</span>
+          <strong id="stopLoss"></strong>
+        </div>
+
+        <div id="entryDecision"></div>
+      </div>
+
+      <div class="warning">
+        現在は動作確認用の試作版です。実際のチャート、経済指標、
+        リアルタイム相場を解析しているわけではありません。
+        表示内容だけで取引を行わないでください。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function analyze() {
+      const pair = document.getElementById("pair").value;
+      const price = Number(document.getElementById("price").value);
+      const trend = document.getElementById("trend").value;
+
+      if (!price || price <= 0) {
+        alert("現在価格を正しく入力してください。");
+        return;
+      }
+
+      let direction = "見送り";
+      let rate = 68;
+      let entry = price;
+      let takeProfit = price;
+      let stopLoss = price;
+
+      if (trend === "up") {
+        direction = "買い";
+        rate = 82;
+        entry = price + 0.010;
+        takeProfit = entry + 0.250;
+        stopLoss = entry - 0.150;
+      }
+
+      if (trend === "down") {
+        direction = "売り";
+        rate = 84;
+        entry = price - 0.010;
+        takeProfit = entry - 0.250;
+        stopLoss = entry + 0.150;
+      }
+
+      if (trend === "range") {
+        direction = "見送り";
+        rate = 68;
+        entry = price;
+        takeProfit = price;
+        stopLoss = price;
+      }
+
+      const signal = document.getElementById("signal");
+
+      if (direction === "買い") {
+        signal.textContent = "🟢 買い候補";
+      } else if (direction === "売り") {
+        signal.textContent = "🔴 売り候補";
+      } else {
+        signal.textContent = "⚪ 見送り";
+      }
+
+      document.getElementById("resultPair").textContent = pair;
+      document.getElementById("winRate").textContent = rate + "%";
+      document.getElementById("entry").textContent = entry.toFixed(3);
+      document.getElementById("takeProfit").textContent =
+        direction === "見送り" ? "-" : takeProfit.toFixed(3);
+      document.getElementById("stopLoss").textContent =
+        direction === "見送り" ? "-" : stopLoss.toFixed(3);
+
+      const decision = document.getElementById("entryDecision");
+
+      if (rate >= 80) {
+        decision.className = "entry-ok";
+        decision.textContent = "通知対象：勝率80%以上のエントリー候補";
+      } else {
+        decision.className = "entry-wait";
+        decision.textContent = "通知なし：条件不足のため見送り";
+      }
+
+      document.getElementById("result").style.display = "block";
+    }
+  </script>
+</body>
+</html>
