@@ -2,355 +2,337 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>FX AI Tool</title>
+
 <style>
-*{box-sizing:border-box}
+
+*{
+  box-sizing:border-box;
+}
+
 body{
- margin:0;
- min-height:100vh;
- padding:18px;
- color:#fff;
- font-family:Arial,"Yu Gothic",sans-serif;
- background:linear-gradient(135deg,#091221,#182943)
+  margin:0;
+  min-height:100vh;
+  padding:18px;
+  color:#ffffff;
+  font-family:Arial,"Yu Gothic",sans-serif;
+  background:
+  linear-gradient(135deg,#08111f,#172944);
 }
-.container{max-width:760px;margin:auto}
+
+.container{
+  width:100%;
+  max-width:780px;
+  margin:0 auto;
+}
+
 .card{
- background:rgba(25,42,68,.97);
- border:1px solid rgba(255,255,255,.12);
- border-radius:22px;
- padding:24px;
- box-shadow:0 18px 45px rgba(0,0,0,.35)
-}
-h1{text-align:center;margin:0 0 18px;font-size:34px}
-.info{
- background:#536984;
- border-radius:14px;
- padding:14px;
- line-height:1.6;
- font-weight:bold
-}
-label{display:block;margin:16px 0 7px;font-weight:bold}
-select,input{
- width:100%;
- padding:14px;
- font-size:17px;
- color:#fff;
- background:#0d1b2e;
- border:1px solid #8091a8;
- border-radius:12px
-}
-button{
- width:100%;
- margin-top:20px;
- padding:16px;
- border:0;
- border-radius:13px;
- font-size:19px;
- font-weight:bold;
- color:#fff;
- cursor:pointer;
- background:linear-gradient(90deg,#13bfd3,#16dfdd)
-}
-button.secondary{
- margin-top:10px;
- background:#334a68
-}
-.result{
- display:none;
- margin-top:22px;
- padding:18px;
- background:#0d1b2e;
- border-radius:16px
-}
-.signal{
- text-align:center;
- font-size:29px;
- font-weight:bold;
- margin:10px 0 18px
-}
-.buy{color:#46e49d}
-.sell{color:#ff7c8c}
-.wait{color:#ffd166}
-.grid{
- display:grid;
- grid-template-columns:repeat(2,1fr);
- gap:11px
-}
-.item{
- padding:13px;
- background:#1c2e49;
- border-radius:11px
-}
-.item span{
- display:block;
- color:#aebdce;
- font-size:13px;
- margin-bottom:5px
-}
-.item strong{font-size:20px}
-.decision{
- margin-top:14px;
- padding:13px;
- border-radius:11px;
- text-align:center;
- font-weight:bold;
- line-height:1.5
-}
-.ok{
- background:rgba(38,190,120,.18);
- border:1px solid #39d18e
-}
-.ng{
- background:rgba(255,193,7,.14);
- border:1px solid #ffd166
-}
-.history{
- margin-top:22px;
- padding-top:18px;
- border-top:1px solid rgba(255,255,255,.15)
-}
-.history-row{
- display:grid;
- grid-template-columns:1fr 1fr 1fr;
- gap:8px;
- padding:9px 0;
- border-bottom:1px solid rgba(255,255,255,.1);
- font-size:14px
-}
-.note{
- margin-top:17px;
- color:#cbd5e1;
- font-size:12px;
- line-height:1.6
-}
-@media(max-width:520px){
- body{padding:10px}
- .card{padding:17px}
- h1{font-size:28px}
- .grid{grid-template-columns:1fr}
-}
-</style>
-</head>
+  padding:24px;
+  border-radius:22px;
+  background:rgba(24,42
 <body>
 <div class="container">
-<div class="card">
+  <div class="card">
 
-<h1>📈 FX AI Tool</h1>
+    <h1>📈 FX AI Tool</h1>
 
-<div class="info">
-勝率80%以上と判断した時だけエントリー推奨します。
-</div>
+    <div class="description">
+      相場の流れ・勢い・時間足・経済指標リスクを入力し、
+      試作ロジックで売買方向・参考勝率・エントリー・利確・損切りを表示します。
+    </div>
 
-<label>通貨ペア</label>
-<select id="pair">
-<option>AUD/JPY</option>
-<option>NZD/JPY</option>
-<option>USD/JPY</option>
-<option>CAD/JPY</option>
-<option>EUR/JPY</option>
-</select>
+    <h2 class="section-title">分析条件</h2>
 
-<label>現在価格</label>
-<input id="price" type="number" step="0.001" placeholder="例 98.250">
+    <label for="pair">通貨ペア</label>
+    <select id="pair">
+      <option>AUD/JPY</option>
+      <option>NZD/JPY</option>
+      <option>CAD/JPY</option>
+      <option>USD/JPY</option>
+      <option>EUR/JPY</option>
+    </select>
 
-<label>AI判定</label>
-<select id="trend">
-<option value="buy">買い優勢</option>
-<option value="sell">売り優勢</option>
-<option value="wait">様子見</option>
-</select>
+    <label for="price">現在価格</label>
+    <input
+      id="price"
+      type="number"
+      step="0.001"
+      placeholder="例：102.350"
+    >
 
-<button onclick="analyze()">AI分析する</button>
-<button class="secondary" onclick="saveTrade()">結果を保存</button>
+    <div class="input-grid">
 
-<div class="result" id="result">
+      <div>
+        <label for="trend">現在の流れ</label>
+        <select id="trend">
+          <option value="up">上昇傾向</option>
+          <option value="down">下降傾向</option>
+          <option value="range">レンジ</option>
+        </select>
+      </div>
 
-<div id="signal" class="signal"></div>
+      <div>
+        <label for="strength">勢い</label>
+        <select id="strength">
+          <option value="strong">強い</option>
+          <option value="normal" selected>普通</option>
+          <option value="weak">弱い</option>
+        </select>
+      </div>
 
-<div class="grid">
+      <div>
+        <label for="timeframe">時間足</label>
+        <select id="timeframe">
+          <option value="5">5分足</option>
+          <option value="15" selected>15分足</option>
+          <option value="60">1時間足</option>
+          <option value="240">4時間足</option>
+        </select>
+      </div>
 
-<div class="item">
-<span>勝率</span>
-<strong id="rate"></strong>
-</div>
+      <div>
+        <label for="indicatorRisk">経済指標リスク</label>
+        <select id="indicatorRisk">
+          <option value="low">低い</option>
+          <option value="medium" selected>普通</option>
+          <option value="high">高い</option>
+        </select>
+      </div>
 
-<div class="item">
-<span>エントリー</span>
-<strong id="entry"></strong>
-</div>
+    </div>
 
-<div class="item">
-<span>利確</span>
-<strong id="tp"></strong>
-</div>
+    <button onclick="analyze()">AI分析する</button>
+    <button class="secondary" onclick="saveTrade()">分析結果を保存</button>
+    <button class="danger" onclick="clearHistory()">保存履歴を削除</button>
 
-<div class="item">
-<span>損切り</span>
-<strong id="sl"></strong>
-</div>
+    <div id="result" class="result">
 
-</div>
+      <div id="signal" class="signal"></div>
 
-<div id="judge" class="decision"></div>
+      <div class="score-box">
+        <strong>総合スコア：<span id="scoreText">0</span>点</strong>
+        <div class="score-bar">
+          <div id="scoreFill" class="score-fill"></div>
+        </div>
+      </div>
 
-<div class="history">
-<h3>保存履歴</h3>
-<div id="history"></div>
-</div>
+      <div class="result-grid">
 
-</div>
+        <div class="result-item">
+          <span>参考勝率</span>
+          <strong id="winRate">-</strong>
+        </div>
 
-<div class="note">
-※AI補助ツールです。最終判断はご自身で行ってください。
-</div>
+        <div class="result-item">
+          <span>通貨ペア</span>
+          <strong id="resultPair">-</strong>
+        </div>
 
-</div>
+        <div class="result-item">
+          <span>エントリー目安</span>
+          <strong id="entry">-</strong>
+        </div>
+
+        <div class="result-item">
+          <span>利確目安</span>
+          <strong id="takeProfit">-</strong>
+        </div>
+
+        <div class="result-item">
+          <span>損切り目安</span>
+          <strong id="stopLoss">-</strong>
+        </div>
+
+        <div class="result-item">
+          <span>リスク・リワード</span>
+          <strong id="riskReward">-</strong>
+        </div>
+
+      </div>
+
+      <div id="judgement" class="judgement"></div>
+
+      <div class="history">
+        <h3>保存履歴</h3>
+        <div id="historyList"></div>
+      </div>
+
+    </div>
+
+    <div class="note">
+      ※これは動作確認用の試作版です。実際のチャート、経済指標、
+      ニュース、リアルタイム価格を自動取得しているわけではありません。
+      表示結果だけで取引を行わないでください。
+    </div>
+
+  </div>
 </div>
 
 <script>
-
 function analyze(){
 
+const pair=document.getElementById("pair").value;
 const price=parseFloat(document.getElementById("price").value);
+const trend=document.getElementById("trend").value;
+const strength=document.getElementById("strength").value;
+const timeframe=document.getElementById("timeframe").value;
+const indicator=document.getElementById("indicatorRisk").value;
 
 if(!price){
-alert("価格を入力してください");
+alert("現在価格を入力してください");
 return;
 }
 
-const trend=document.getElementById("trend").value;
+let score=50;
 
-let rate=0;
-let signal="";
-if(trend==="buy"){
-rate=84;
+if(trend==="up") score+=15;
+if(trend==="down") score+=15;
+if(trend==="range") score-=5;
+
+if(strength==="strong") score+=20;
+if(strength==="normal") score+=10;
+if(strength==="weak") score-=10;
+
+if(timeframe==="15") score+=5;
+if(timeframe==="60") score+=8;
+if(timeframe==="240") score+=10;
+
+if(indicator==="medium") score-=5;
+if(indicator==="high") score-=15;
+
+if(score>95) score=95;
+if(score<40) score=40;
+
+let signal="様子見";
+let cls="wait";
+
+if(trend==="up"){
 signal="▲ 買い優勢";
-}else if(trend==="sell"){
-rate=84;
-signal="▼ 売り優勢";
-}else{
-rate=62;
-signal="⏸ 様子見";
+cls="buy";
 }
 
-const entry=price;
-const tp=trend==="buy"
-?price+0.150
-:trend==="sell"
-?price-0.150
-:price;
+if(trend==="down"){
+signal="▼ 売り優勢";
+cls="sell";
+}
 
-const sl=trend==="buy"
-?price-0.100
-:trend==="sell"
-?price+0.100
-:price;
+document.getElementById("signal").textContent=signal;
+document.getElementById("signal").className="signal "+cls;
 
-const signalEl=document.getElementById("signal");
+document.getElementById("scoreText").textContent=score;
+document.getElementById("scoreFill").style.width=score+"%";
 
-signalEl.textContent=signal;
-signalEl.className=
-"signal "+
-(trend==="buy"
-?"buy"
-:trend==="sell"
-?"sell"
-:"wait");
+document.getElementById("winRate").textContent=score+"%";
+document.getElementById("resultPair").textContent=pair;
 
-document.getElementById("rate").textContent=rate+"%";
-document.getElementById("entry").textContent=
-trend==="wait"?"-":entry.toFixed(3);
-document.getElementById("tp").textContent=
-trend==="wait"?"-":tp.toFixed(3);
-document.getElementById("sl").textContent=
-trend==="wait"?"-":sl.toFixed(3);
+const pip=0.01;
 
-const judge=document.getElementById("judge");
+let entry=price;
+let tp=price;
+let sl=price;
 
-if(rate>=80 && trend!=="wait"){
-judge.className="decision ok";
-judge.textContent=
-"✅ 勝率80%以上：エントリー候補";
+if(trend==="up"){
+entry=price+0.02;
+tp=entry+0.18;
+sl=entry-0.12;
+}
+
+if(trend==="down"){
+entry=price-0.02;
+tp=entry-0.18;
+sl=entry+0.12;
+}
+
+document.getElementById("entry").textContent=entry.toFixed(3);
+document.getElementById("takeProfit").textContent=tp.toFixed(3);
+document.getElementById("stopLoss").textContent=sl.toFixed(3);
+document.getElementById("riskReward").textContent="1 : 1.5";
+
+const judge=document.getElementById("judgement");
+
+if(score>=80){
+judge.className="judgement judgement-ok";
+judge.innerHTML="✅ AI判定：勝率80%以上。エントリー候補です。";
 }else{
-judge.className="decision ng";
-judge.textContent=
-"⚠️ 条件未達：見送り推奨";
+judge.className="judgement judgement-wait";
+judge.innerHTML="⚠ AI判定：条件不足。見送り推奨。";
 }
 
 document.getElementById("result").style.display="block";
-loadHistory();
-}
 
+loadHistory();
+
+}
 function saveTrade(){
 
 const pair=document.getElementById("pair").value;
 const price=document.getElementById("price").value;
-const trend=document.getElementById("trend").value;
+const rate=document.getElementById("winRate").textContent;
 
-if(!price){
-alert("先に価格を入力してください");
+if(price===""){
+alert("先に分析してください");
 return;
 }
 
-const item={
+const history=JSON.parse(localStorage.getItem("fxHistory")||"[]");
+
+history.unshift({
 date:new Date().toLocaleString("ja-JP"),
 pair:pair,
 price:price,
-trend:trend
-};
-
-const data=JSON.parse(
-localStorage.getItem("fxHistory")||"[]"
-);
-
-data.unshift(item);
+rate:rate
+});
 
 localStorage.setItem(
 "fxHistory",
-JSON.stringify(data.slice(0,10))
+JSON.stringify(history.slice(0,20))
 );
 
 loadHistory();
 
-alert("履歴を保存しました");
+alert("保存しました");
+
 }
 
 function loadHistory(){
 
-const box=document.getElementById("history");
+const history=JSON.parse(localStorage.getItem("fxHistory")||"[]");
 
-const data=JSON.parse(
-localStorage.getItem("fxHistory")||"[]"
-);
+const box=document.getElementById("historyList");
 
-if(data.length===0){
+if(history.length===0){
 box.innerHTML="<p>保存履歴はありません。</p>";
 return;
 }
 
-box.innerHTML=data.map(function(item){
-
-const label=
-item.trend==="buy"
-?"買い"
-:item.trend==="sell"
-?"売り"
-:"様子見";
-
-return `
+box.innerHTML=history.map(item=>`
 <div class="history-row">
 <div>${item.date}</div>
 <div>${item.pair}</div>
-<div>${label} ${item.price}</div>
+<div>${item.rate}</div>
 </div>
-`;
+`).join("");
 
-}).join("");
+}
+
+function clearHistory(){
+
+if(!confirm("保存履歴を削除しますか？")){
+return;
+}
+
+localStorage.removeItem("fxHistory");
+
+loadHistory();
+
 }
 
 loadHistory();
 
 </script>
+
 </body>
-</html>  
+</html> 
+ 
