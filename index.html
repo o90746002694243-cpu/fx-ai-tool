@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>FX AI Tool</title>
 
 <style>
-
 *{
   box-sizing:border-box;
 }
@@ -16,10 +14,9 @@ body{
   margin:0;
   min-height:100vh;
   padding:18px;
-  color:#ffffff;
+  color:#fff;
   font-family:Arial,"Yu Gothic",sans-serif;
-  background:
-  linear-gradient(135deg,#08111f,#172944);
+  background:linear-gradient(135deg,#08111f,#172944);
 }
 
 .container{
@@ -31,308 +28,455 @@ body{
 .card{
   padding:24px;
   border-radius:22px;
-  background:rgba(24,42
+  background:#182a44;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 18px 50px rgba(0,0,0,.38);
+}
+
+h1{
+  margin:0 0 18px;
+  text-align:center;
+  font-size:34px;
+}
+
+.description{
+  padding:15px;
+  border-radius:14px;
+  background:#536b89;
+  line-height:1.6;
+  font-weight:bold;
+}
+
+label{
+  display:block;
+  margin:16px 0 8px;
+  font-weight:bold;
+}
+
+select,
+input{
+  width:100%;
+  padding:14px;
+  color:#fff;
+  font-size:17px;
+  background:#0d1c30;
+  border:1px solid #8294ab;
+  border-radius:12px;
+}
+
+.input-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+button{
+  width:100%;
+  margin-top:20px;
+  padding:16px;
+  color:#fff;
+  font-size:19px;
+  font-weight:bold;
+  border:0;
+  border-radius:13px;
+  cursor:pointer;
+  background:linear-gradient(90deg,#10bdd2,#18e0dd);
+}
+
+button.secondary{
+  margin-top:10px;
+  background:#344c6b;
+}
+
+button.danger{
+  margin-top:10px;
+  background:#763848;
+}
+
+.result{
+  display:none;
+  margin-top:24px;
+  padding:20px;
+  border-radius:16px;
+  background:#0d1c30;
+}
+
+.signal{
+  margin:10px 0 18px;
+  text-align:center;
+  font-size:30px;
+  font-weight:bold;
+}
+
+.buy{color:#48e5a1;}
+.sell{color:#ff7d8d;}
+.wait{color:#ffd166;}
+
+.score-box{
+  margin-bottom:14px;
+  padding:14px;
+  border-radius:12px;
+  background:#162946;
+}
+
+.score-bar{
+  width:100%;
+  height:13px;
+  margin-top:9px;
+  overflow:hidden;
+  border-radius:20px;
+  background:#07111e;
+}
+
+.score-fill{
+  width:0;
+  height:100%;
+  border-radius:20px;
+  background:linear-gradient(90deg,#10bdd2,#48e5a1);
+}
+
+.result-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+}
+
+.result-item{
+  padding:14px;
+  border-radius:12px;
+  background:#1b2f4b;
+}
+
+.result-item span{
+  display:block;
+  margin-bottom:6px;
+  color:#aebdce;
+  font-size:13px;
+}
+
+.result-item strong{
+  font-size:20px;
+}
+
+.judgement{
+  margin-top:15px;
+  padding:14px;
+  text-align:center;
+  font-weight:bold;
+  line-height:1.5;
+  border-radius:12px;
+}
+
+.ok{
+  background:rgba(38,190,120,.18);
+  border:1px solid #3bd28f;
+}
+
+.ng{
+  background:rgba(255,193,7,.14);
+  border:1px solid #ffd166;
+}
+
+.history{
+  margin-top:24px;
+  padding-top:18px;
+  border-top:1px solid rgba(255,255,255,.14);
+}
+
+.history-row{
+  display:grid;
+  grid-template-columns:1.5fr 1fr 1fr;
+  gap:8px;
+  padding:10px 0;
+  font-size:13px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+
+.note{
+  margin-top:18px;
+  color:#c8d4e2;
+  font-size:12px;
+  line-height:1.6;
+}
+
+@media(max-width:560px){
+  body{padding:10px;}
+  .card{padding:17px;}
+  h1{font-size:28px;}
+  .input-grid,
+  .result-grid{grid-template-columns:1fr;}
+  .history-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+
 <body>
 <div class="container">
-  <div class="card">
+<div class="card">
 
-    <h1>📈 FX AI Tool</h1>
+<h1>📈 FX AI Tool</h1>
 
-    <div class="description">
-      相場の流れ・勢い・時間足・経済指標リスクを入力し、
-      試作ロジックで売買方向・参考勝率・エントリー・利確・損切りを表示します。
-    </div>
-
-    <h2 class="section-title">分析条件</h2>
-
-    <label for="pair">通貨ペア</label>
-    <select id="pair">
-      <option>AUD/JPY</option>
-      <option>NZD/JPY</option>
-      <option>CAD/JPY</option>
-      <option>USD/JPY</option>
-      <option>EUR/JPY</option>
-    </select>
-
-    <label for="price">現在価格</label>
-    <input
-      id="price"
-      type="number"
-      step="0.001"
-      placeholder="例：102.350"
-    >
-
-    <div class="input-grid">
-
-      <div>
-        <label for="trend">現在の流れ</label>
-        <select id="trend">
-          <option value="up">上昇傾向</option>
-          <option value="down">下降傾向</option>
-          <option value="range">レンジ</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="strength">勢い</label>
-        <select id="strength">
-          <option value="strong">強い</option>
-          <option value="normal" selected>普通</option>
-          <option value="weak">弱い</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="timeframe">時間足</label>
-        <select id="timeframe">
-          <option value="5">5分足</option>
-          <option value="15" selected>15分足</option>
-          <option value="60">1時間足</option>
-          <option value="240">4時間足</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="indicatorRisk">経済指標リスク</label>
-        <select id="indicatorRisk">
-          <option value="low">低い</option>
-          <option value="medium" selected>普通</option>
-          <option value="high">高い</option>
-        </select>
-      </div>
-
-    </div>
-
-    <button onclick="analyze()">AI分析する</button>
-    <button class="secondary" onclick="saveTrade()">分析結果を保存</button>
-    <button class="danger" onclick="clearHistory()">保存履歴を削除</button>
-
-    <div id="result" class="result">
-
-      <div id="signal" class="signal"></div>
-
-      <div class="score-box">
-        <strong>総合スコア：<span id="scoreText">0</span>点</strong>
-        <div class="score-bar">
-          <div id="scoreFill" class="score-fill"></div>
-        </div>
-      </div>
-
-      <div class="result-grid">
-
-        <div class="result-item">
-          <span>参考勝率</span>
-          <strong id="winRate">-</strong>
-        </div>
-
-        <div class="result-item">
-          <span>通貨ペア</span>
-          <strong id="resultPair">-</strong>
-        </div>
-
-        <div class="result-item">
-          <span>エントリー目安</span>
-          <strong id="entry">-</strong>
-        </div>
-
-        <div class="result-item">
-          <span>利確目安</span>
-          <strong id="takeProfit">-</strong>
-        </div>
-
-        <div class="result-item">
-          <span>損切り目安</span>
-          <strong id="stopLoss">-</strong>
-        </div>
-
-        <div class="result-item">
-          <span>リスク・リワード</span>
-          <strong id="riskReward">-</strong>
-        </div>
-
-      </div>
-
-      <div id="judgement" class="judgement"></div>
-
-      <div class="history">
-        <h3>保存履歴</h3>
-        <div id="historyList"></div>
-      </div>
-
-    </div>
-
-    <div class="note">
-      ※これは動作確認用の試作版です。実際のチャート、経済指標、
-      ニュース、リアルタイム価格を自動取得しているわけではありません。
-      表示結果だけで取引を行わないでください。
-    </div>
-
-  </div>
+<div class="description">
+相場の流れ・勢い・時間足・経済指標リスクを入力すると、
+参考勝率・エントリー・利確・損切りを表示します。
 </div>
 
-<script>
-function analyze(){
+<label for="pair">通貨ペア</label>
+<select id="pair">
+  <option>AUD/JPY</option>
+  <option>NZD/JPY</option>
+  <option>CAD/JPY</option>
+  <option>USD/JPY</option>
+  <option>EUR/JPY</option>
+</select>
 
-const pair=document.getElementById("pair").value;
-const price=parseFloat(document.getElementById("price").value);
-const trend=document.getElementById("trend").value;
-const strength=document.getElementById("strength").value;
-const timeframe=document.getElementById("timeframe").value;
-const indicator=document.getElementById("indicatorRisk").value;
+<label for="price">現在価格</label>
+<input id="price" type="number" step="0.001" placeholder="例：102.350">
 
-if(!price){
-alert("現在価格を入力してください");
-return;
-}
+<div class="input-grid">
 
-let score=50;
-
-if(trend==="up") score+=15;
-if(trend==="down") score+=15;
-if(trend==="range") score-=5;
-
-if(strength==="strong") score+=20;
-if(strength==="normal") score+=10;
-if(strength==="weak") score-=10;
-
-if(timeframe==="15") score+=5;
-if(timeframe==="60") score+=8;
-if(timeframe==="240") score+=10;
-
-if(indicator==="medium") score-=5;
-if(indicator==="high") score-=15;
-
-if(score>95) score=95;
-if(score<40) score=40;
-
-let signal="様子見";
-let cls="wait";
-
-if(trend==="up"){
-signal="▲ 買い優勢";
-cls="buy";
-}
-
-if(trend==="down"){
-signal="▼ 売り優勢";
-cls="sell";
-}
-
-document.getElementById("signal").textContent=signal;
-document.getElementById("signal").className="signal "+cls;
-
-document.getElementById("scoreText").textContent=score;
-document.getElementById("scoreFill").style.width=score+"%";
-
-document.getElementById("winRate").textContent=score+"%";
-document.getElementById("resultPair").textContent=pair;
-
-const pip=0.01;
-
-let entry=price;
-let tp=price;
-let sl=price;
-
-if(trend==="up"){
-entry=price+0.02;
-tp=entry+0.18;
-sl=entry-0.12;
-}
-
-if(trend==="down"){
-entry=price-0.02;
-tp=entry-0.18;
-sl=entry+0.12;
-}
-
-document.getElementById("entry").textContent=entry.toFixed(3);
-document.getElementById("takeProfit").textContent=tp.toFixed(3);
-document.getElementById("stopLoss").textContent=sl.toFixed(3);
-document.getElementById("riskReward").textContent="1 : 1.5";
-
-const judge=document.getElementById("judgement");
-
-if(score>=80){
-judge.className="judgement judgement-ok";
-judge.innerHTML="✅ AI判定：勝率80%以上。エントリー候補です。";
-}else{
-judge.className="judgement judgement-wait";
-judge.innerHTML="⚠ AI判定：条件不足。見送り推奨。";
-}
-
-document.getElementById("result").style.display="block";
-
-loadHistory();
-
-}
-function saveTrade(){
-
-const pair=document.getElementById("pair").value;
-const price=document.getElementById("price").value;
-const rate=document.getElementById("winRate").textContent;
-
-if(price===""){
-alert("先に分析してください");
-return;
-}
-
-const history=JSON.parse(localStorage.getItem("fxHistory")||"[]");
-
-history.unshift({
-date:new Date().toLocaleString("ja-JP"),
-pair:pair,
-price:price,
-rate:rate
-});
-
-localStorage.setItem(
-"fxHistory",
-JSON.stringify(history.slice(0,20))
-);
-
-loadHistory();
-
-alert("保存しました");
-
-}
-
-function loadHistory(){
-
-const history=JSON.parse(localStorage.getItem("fxHistory")||"[]");
-
-const box=document.getElementById("historyList");
-
-if(history.length===0){
-box.innerHTML="<p>保存履歴はありません。</p>";
-return;
-}
-
-box.innerHTML=history.map(item=>`
-<div class="history-row">
-<div>${item.date}</div>
-<div>${item.pair}</div>
-<div>${item.rate}</div>
+<div>
+<label for="trend">現在の流れ</label>
+<select id="trend">
+  <option value="up">上昇傾向</option>
+  <option value="down">下降傾向</option>
+  <option value="range">レンジ</option>
+</select>
 </div>
-`).join("");
 
+<div>
+<label for="strength">勢い</label>
+<select id="strength">
+  <option value="strong">強い</option>
+  <option value="normal" selected>普通</option>
+  <option value="weak">弱い</option>
+</select>
+</div>
+
+<div>
+<label for="timeframe">時間足</label>
+<select id="timeframe">
+  <option value="5">5分足</option>
+  <option value="15" selected>15分足</option>
+  <option value="60">1時間足</option>
+  <option value="240">4時間足</option>
+</select>
+</div>
+
+<div>
+<label for="risk">経済指標リスク</label>
+<select id="risk">
+  <option value="low">低い</option>
+  <option value="medium" selected>普通</option>
+  <option value="high">高い
+let lastAnalysis = null;
+
+function analyze() {
+  const pair = document.getElementById("pair").value;
+  const price = Number.parseFloat(
+    document.getElementById("price").value
+  );
+  const trend = document.getElementById("trend").value;
+  const strength = document.getElementById("strength").value;
+  const timeframe = document.getElementById("timeframe").value;
+  const risk = document.getElementById("risk").value;
+
+  if (!Number.isFinite(price) || price <= 0) {
+    alert("現在価格を正しく入力してください。");
+    return;
+  }
+
+  let score = 50;
+
+  if (trend === "up" || trend === "down") {
+    score += 15;
+  } else {
+    score -= 10;
+  }
+
+  if (strength === "strong") {
+    score += 20;
+  } else if (strength === "normal") {
+    score += 10;
+  } else {
+    score -= 10;
+  }
+
+  if (timeframe === "15") score += 5;
+  if (timeframe === "60") score += 8;
+  if (timeframe === "240") score += 10;
+
+  if (risk === "medium") score -= 5;
+  if (risk === "high") score -= 20;
+
+  score = Math.max(40, Math.min(95, score));
+
+  let direction = "見送り";
+  let signalClass = "wait";
+
+  if (trend === "up") {
+    direction = "買い";
+    signalClass = "buy";
+  } else if (trend === "down") {
+    direction = "売り";
+    signalClass = "sell";
+  }
+
+  const stopDistance =
+    strength === "strong"
+      ? 0.10
+      : strength === "normal"
+      ? 0.12
+      : 0.15;
+
+  const profitDistance = stopDistance * 1.5;
+
+  let entry = price;
+  let takeProfit = price;
+  let stopLoss = price;
+
+  if (direction === "買い") {
+    entry = price + 0.02;
+    takeProfit = entry + profitDistance;
+    stopLoss = entry - stopDistance;
+  } else if (direction === "売り") {
+    entry = price - 0.02;
+    takeProfit = entry - profitDistance;
+    stopLoss = entry + stopDistance;
+  }
+
+  const signal = document.getElementById("signal");
+
+  signal.textContent =
+    direction === "買い"
+      ? "▲ 買い優勢"
+      : direction === "売り"
+      ? "▼ 売り優勢"
+      : "⏸ 見送り";
+
+  signal.className = "signal " + signalClass;
+
+  document.getElementById("scoreText").textContent =
+    String(score);
+
+  document.getElementById("scoreFill").style.width =
+    score + "%";
+
+  document.getElementById("winRate").textContent =
+    score + "%";
+
+  document.getElementById("resultPair").textContent =
+    pair;
+
+  document.getElementById("entry").textContent =
+    direction === "見送り"
+      ? "-"
+      : entry.toFixed(3);
+
+  document.getElementById("takeProfit").textContent =
+    direction === "見送り"
+      ? "-"
+      : takeProfit.toFixed(3);
+
+  document.getElementById("stopLoss").textContent =
+    direction === "見送り"
+      ? "-"
+      : stopLoss.toFixed(3);
+
+  document.getElementById("riskReward").textContent =
+    direction === "見送り"
+      ? "-"
+      : "1 : 1.5";
+
+  const judgement =
+    document.getElementById("judgement");
+
+  if (
+    score >= 80 &&
+    direction !== "見送り" &&
+    risk !== "high"
+  ) {
+    judgement.className = "judgement ok";
+    judgement.textContent =
+      "✅ 参考勝率80%以上：エントリー候補です。";
+  } else {
+    judgement.className = "judgement ng";
+    judgement.textContent =
+      "⚠️ 条件不足または指標リスクあり：見送り推奨です。";
+  }
+
+  lastAnalysis = {
+    date: new Date().toLocaleString("ja-JP"),
+    pair: pair,
+    price: price.toFixed(3),
+    rate: score + "%",
+    direction: direction
+  };
+
+  document.getElementById("result").style.display =
+    "block";
+
+  loadHistory();
 }
 
-function clearHistory(){
+function saveTrade() {
+  if (!lastAnalysis) {
+    alert("先にAI分析を実行してください。");
+    return;
+  }
 
-if(!confirm("保存履歴を削除しますか？")){
-return;
+  const history = JSON.parse(
+    localStorage.getItem("fxHistory") || "[]"
+  );
+
+  history.unshift(lastAnalysis);
+
+  localStorage.setItem(
+    "fxHistory",
+    JSON.stringify(history.slice(0, 20))
+  );
+
+  loadHistory();
+
+  alert("分析結果を保存しました。");
 }
 
-localStorage.removeItem("fxHistory");
+function loadHistory() {
+  const history = JSON.parse(
+    localStorage.getItem("fxHistory") || "[]"
+  );
 
-loadHistory();
+  const box =
+    document.getElementById("historyList");
 
+  if (history.length === 0) {
+    box.innerHTML =
+      "<p>保存履歴はありません。</p>";
+    return;
+  }
+
+  box.innerHTML = history.map(function(item) {
+    return `
+      <div class="history-row">
+        <div>${item.date}</div>
+        <div>${item.pair}・${item.direction}</div>
+        <div>${item.rate}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function clearHistory() {
+  if (!confirm("保存履歴を削除しますか？")) {
+    return;
+  }
+
+  localStorage.removeItem("fxHistory");
+  loadHistory();
 }
 
 loadHistory();
 
 </script>
-
 </body>
-</html> 
- 
+</html>    
