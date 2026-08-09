@@ -699,7 +699,248 @@ document
 loadHistory();
 
 }
+async function analyze(){
 
+  const pair =
+    document.getElementById("pair").value;
+
+  const price =
+    Number.parseFloat(
+      document.getElementById("price").value
+    );
+
+  const timeframe =
+    document.getElementById("timeframe").value;
+
+  const risk =
+    document.getElementById("risk").value;
+
+  const file =
+    document.getElementById("chartImage").files[0];
+
+  if(!Number.isFinite(price) || price <= 0){
+    alert("現在価格を正しく入力してください。");
+    return;
+  }
+
+  if(!file){
+    alert("チャート画像を選択してください。");
+    return;
+  }
+
+  const button =
+    document.querySelector(
+      'button[onclick="analyze()"]'
+    );
+
+  button.disabled = true;
+  button.textContent = "AI分析中...";
+
+  try{
+
+    const image = await new Promise(
+      function(resolve,reject){
+
+        const reader = new FileReader();
+
+        reader.onload = function(){
+          resolve(reader.result);
+        };
+
+        reader.onerror = function(){
+          reject(
+            new Error(
+              "画像を読み込めませんでした。"
+            )
+          );
+        };
+
+        reader.readAsDataURL(file);
+
+      }
+    );
+
+    const response = await fetch(
+      "/.netlify/functions/analyze-chart",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          image: image,
+          pair: pair,
+          price: price.toFixed(3),
+          timeframe: timeframe
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if(!response.ok){
+      console.error(data);
+
+      throw new Error(
+        data.error ||
+        "AI分析に失敗しました。"
+      );
+    }
+
+    const analysis = data.analysis;
+
+    const score =
+      Number(analysis.score) || 0;
+
+    const direction =
+      analysis.direction || "見送り";
+
+    const signal =
+      document.getElementById("signal");
+
+    if(direction === "買い"){
+
+      signal.textContent =
+        "▲ 買い優勢";
+
+      signal.className =
+        "signal buy";
+
+    }else if(direction === "売り"){
+
+      signal.textContent =
+        "▼ 売り優勢";
+
+      signal.className =
+        "signal sell";
+
+    }else{
+
+      signal.textContent =
+        "⏸ 見送り";
+
+      signal.className =
+        "signal wait";
+
+    }
+
+    document
+      .getElementById("scoreText")
+      .textContent = String(score);
+
+    document
+      .getElementById("scoreFill")
+      .style.width =
+      Math.max(
+        0,
+        Math.min(100,score)
+      ) + "%";
+
+    document
+      .getElementById("winRate")
+      .textContent =
+      score + "%";
+
+    document
+      .getElementById("resultPair")
+      .textContent =
+      pair;
+
+    document
+      .getElementById("entry")
+      .textContent =
+      analysis.entry || "判断困難";
+
+    document
+      .getElementById("takeProfit")
+      .textContent =
+      analysis.takeProfit ||
+      "判断困難";
+
+    document
+      .getElementById("stopLoss")
+      .textContent =
+      analysis.stopLoss ||
+      "判断困難";
+
+    document
+      .getElementById("riskReward")
+      .textContent =
+      "AI判定";
+
+    const judgement =
+      document.getElementById(
+        "judgement"
+      );
+
+    if(
+      score >= 80 &&
+      direction !== "見送り" &&
+      risk !== "high"
+    ){
+
+      judgement.className =
+        "judge ok";
+
+      judgement.textContent =
+        "🚀 GO！AIスコア80以上：" +
+        direction +
+        "エントリー候補です。";
+
+    }else{
+
+      judgement.className =
+        "judge ng";
+
+      judgement.textContent =
+        "⚠️ AIスコア80未満、見送り判定、または指標リスクあり：見送り推奨です。";
+
+    }
+
+    lastAnalysis = {
+
+      date:
+        new Date().toLocaleString(
+          "ja-JP"
+        ),
+
+      pair: pair,
+
+      price:
+        price.toFixed(3),
+
+      rate:
+        score + "%",
+
+      direction:
+        direction
+
+    };
+
+    document
+      .getElementById("result")
+      .style.display =
+      "block";
+
+    loadHistory();
+
+  }catch(error){
+
+    console.error(error);
+
+    alert(
+      "AI分析でエラーが発生しました。\n" +
+      error.message
+    );
+
+  }finally{
+
+    button.disabled = false;
+    button.textContent = "AI分析する";
+
+  }
+
+}
 function saveTrade(){
 
 if(!lastAnalysis){
