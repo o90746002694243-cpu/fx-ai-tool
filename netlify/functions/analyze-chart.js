@@ -47,42 +47,32 @@ exports.handler = async function (event) {
 
     const prompt = `
 あなたはFXチャート分析アシスタントです。
-
 添付されたチャート画像を分析してください。
 
 通貨ペア: ${pair}
 現在価格: ${price}
 時間足: ${timeframe}
 
-チャートから確認できる範囲だけを使い、
-以下を判断してください。
+チャート画像から確認できる情報を優先し、
+以下を分析してください。
 
-・トレンド
-・買い優勢 / 売り優勢 / 見送り
-・サポートライン
-・レジスタンスライン
+・現在のトレンド
+・買い / 売り / 見送り
 ・エントリー候補
 ・利確候補
 ・損切り候補
+・サポートライン
+・レジスタンスライン
+・判断理由
 ・参考スコア
 
-参考スコアは0〜100の整数です。
-画像から判断できない項目は無理に推測せず
+参考スコアは0〜100の整数にしてください。
+
+重要:
+根拠が弱い場合は無理にエントリーを勧めず、
+「見送り」にしてください。
+画像から判断できない価格は推測せず
 「判断困難」としてください。
-
-必ず次のJSON形式だけで回答してください。
-
-{
-  "direction": "買い|売り|見送り",
-  "trend": "上昇|下降|レンジ|判断困難",
-  "score": 0,
-  "entry": "数値または判断困難",
-  "takeProfit": "数値または判断困難",
-  "stopLoss": "数値または判断困難",
-  "support": "数値または判断困難",
-  "resistance": "数値または判断困難",
-  "reason": "判断理由"
-}
 `;
 
     const response = await fetch(
@@ -95,6 +85,7 @@ exports.handler = async function (event) {
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
+
           input: [
             {
               role: "user",
@@ -109,7 +100,63 @@ exports.handler = async function (event) {
                 }
               ]
             }
-          ]
+          ],
+
+          text: {
+            format: {
+              type: "json_schema",
+              name: "fx_chart_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  direction: {
+                    type: "string",
+                    enum: ["買い", "売り", "見送り"]
+                  },
+                  trend: {
+                    type: "string",
+                    enum: ["上昇", "下降", "レンジ", "判断困難"]
+                  },
+                  score: {
+                    type: "integer",
+                    minimum: 0,
+                    maximum: 100
+                  },
+                  entry: {
+                    type: "string"
+                  },
+                  takeProfit: {
+                    type: "string"
+                  },
+                  stopLoss: {
+                    type: "string"
+                  },
+                  support: {
+                    type: "string"
+                  },
+                  resistance: {
+                    type: "string"
+                  },
+                  reason: {
+                    type: "string"
+                  }
+                },
+                required: [
+                  "direction",
+                  "trend",
+                  "score",
+                  "entry",
+                  "takeProfit",
+                  "stopLoss",
+                  "support",
+                  "resistance",
+                  "reason"
+                ],
+                additionalProperties: false
+              }
+            }
+          }
         })
       }
     );
@@ -143,16 +190,13 @@ exports.handler = async function (event) {
       }
     }
 
-    text = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
     let analysis;
 
     try {
       analysis = JSON.parse(text);
-    } catch (e) {
+    } catch (error) {
+      console.error("JSON parse error:", error, text);
+
       analysis = {
         direction: "見送り",
         trend: "判断困難",
@@ -162,7 +206,7 @@ exports.handler = async function (event) {
         stopLoss: "判断困難",
         support: "判断困難",
         resistance: "判断困難",
-        reason: text || "AIの回答を解析できませんでした。"
+        reason: "AIの分析結果を読み取れませんでした。"
       };
     }
 
@@ -187,4 +231,4 @@ exports.handler = async function (event) {
       })
     };
   }
-};        
+};                
