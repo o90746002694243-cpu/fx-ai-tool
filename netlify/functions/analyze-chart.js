@@ -137,6 +137,15 @@ const prompt = `
                   stopLoss: {
                     type: "string"
                   },
+                  buyTrigger: {
+                    type: "string"
+                  },
+                  sellTrigger: {
+                    type: "string"
+                  },
+                  triggerReason: {
+                    type: "string"
+                  },
                   support: {
                     type: "string"
                   },
@@ -153,7 +162,10 @@ const prompt = `
                   "score",
                   "entry",
                   "takeProfit",
-                  "stopLoss",
+                  "stopLoss",  
+                  "buyTrigger",
+                  "sellTrigger",
+                  "triggerReason",
                   "support",
                   "resistance",
                   "reason"
