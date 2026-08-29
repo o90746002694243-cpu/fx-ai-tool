@@ -382,10 +382,24 @@ onclick="clearHistory()"
 </div>
 
 <div class="item">
-<span>損切り目安</span>
+<span>損切り目安</span>  
 <strong id="stopLoss">-</strong>
 </div>
 
+<div class="item">
+  <span>買い待ち価格</span>
+  <strong id="buyTrigger">-</strong>
+</div>
+
+<div class="item">
+  <span>売り待ち価格</span>
+  <strong id="sellTrigger">-</strong>
+</div>
+
+<div class="item">
+  <span>発動条件</span>
+  <strong id="triggerReason">-</strong>
+</div>  
 <div class="item">
 <span>リスク・リワード</span>
 <strong id="riskReward">-</strong>
@@ -862,6 +876,20 @@ async function analyze(){
       .textContent =
       analysis.stopLoss ||
       "判断困難";
+document
+  .getElementById("buyTrigger")
+  .textContent =
+  analysis.buyTrigger || "-";
+
+document
+  .getElementById("sellTrigger")
+  .textContent =
+  analysis.sellTrigger || "-";
+
+document
+  .getElementById("triggerReason")
+  .textContent =
+  analysis.triggerReason || "-";    
 
     document
       .getElementById("riskReward")
