@@ -488,27 +488,25 @@ status.textContent =
 
 async function analyze(){
 
-  const pair =
-    document.getElementById("pair").value;
+ const pair =
+  document.getElementById("pair").value || "不明";
 
-  const price =
-    Number.parseFloat(
-      document.getElementById("price").value
-    );
+const priceInput =
+  document.getElementById("price").value;
 
-  const timeframe =
-    document.getElementById("timeframe").value;
+const price =
+  priceInput
+    ? Number.parseFloat(priceInput)
+    : "不明";
+
+const timeframe =
+  document.getElementById("timeframe").value || "不明";
 
   const risk =
     document.getElementById("risk").value;
 
   const file =
     document.getElementById("chartImage").files[0];
-
-  if(!Number.isFinite(price) || price <= 0){
-    alert("現在価格を正しく入力してください。");
-    return;
-  }
 
   if(!file){
     alert("チャート画像を選択してください。");
@@ -557,7 +555,7 @@ async function analyze(){
         body: JSON.stringify({
           image: image,
           pair: pair,
-          price: price.toFixed(3),
+          price: Number.isFinite(price) ? price.toFixed(3) : "不明",
           timeframe: timeframe
         })
       }
@@ -631,7 +629,19 @@ async function analyze(){
     document
       .getElementById("resultPair")
       .textContent =
-      pair;
+      analysis.pair || pair || "不明";
+     
+    if (analysis.pair && analysis.pair !== "不明") {
+      document.getElementById("pair").value = analysis.pair;
+    }
+
+    if (analysis.price && analysis.price !== "不明") {
+      document.getElementById("price").value = analysis.price;
+    }
+
+    if (analysis.timeframe && analysis.timeframe !== "不明") {
+      document.getElementById("timeframe").value = analysis.timeframe;
+    }
 
     document
       .getElementById("entry")
