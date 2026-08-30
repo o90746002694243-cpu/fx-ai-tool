@@ -664,14 +664,24 @@ document
   .textContent =
   analysis.triggerReason || "-";    
 
-const reward = Math.abs(takeProfit - entry);
-const riskAmount = Math.abs(entry - stopLoss);
-const rr = riskAmount > 0 ? (reward / riskAmount).toFixed(2) : "-";
+const entryNum = Number.parseFloat(analysis.entry);
+const takeProfitNum = Number.parseFloat(analysis.takeProfit);
+const stopLossNum = Number.parseFloat(analysis.stopLoss);
+
+const reward = Math.abs(takeProfitNum - entryNum);
+const riskAmount = Math.abs(entryNum - stopLossNum);
+
+const rr =
+  Number.isFinite(reward) &&
+  Number.isFinite(riskAmount) &&
+  riskAmount > 0
+    ? (reward / riskAmount).toFixed(2)
+    : "-";
 
 document
   .getElementById("riskReward")
   .textContent =
-  rr === "-" ? "-" : `1 : ${rr}`;   
+  rr === "-" ? "-" : `1 : ${rr}`;
 
     const judgement =
       document.getElementById(
