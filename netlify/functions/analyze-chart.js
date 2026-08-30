@@ -1,104 +1,170 @@
-exports.handler = async function (event) {
-  const headers = {
-    "Content-Type": "application/json; charset=utf-8"
-  };
-
-  if (event.httpMethod !== "POST") {
+exports.handler = async function(event) {
+  if (event.httpMethod === "OPTIONS") {
     return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({
-        error: "POSTで送信してください。"
-      })
+      statusCode: 200,
+      headers: corsHeaders(),
+      body: "ok"
     };
   }
 
+  if (event.httpMethod !== "POST") {
+    return jsonResponse(405, {
+      error: "Method Not Allowed"
+    });
+  }
+
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-
-    if (!apiKey) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          error: "OPENAI_API_KEYが設定されていません。"
-        })
-      };
-    }
-
     const body = JSON.parse(event.body || "{}");
 
     const {
       image,
       pair = "不明",
       price = "不明",
-      timeframe = "不明"
+      timeframe = "不明",
+      risk = "medium"
     } = body;
 
     if (!image) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          error: "チャート画像がありません。"
-        })
-      };
+      return jsonResponse(400, {
+        error: "チャート画像がありません。"
+      });
     }
 
-const prompt = `
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return jsonResponse(500, {
+        error: "OPENAI_API_KEY が設定されていません。"
+      });
+    }
+
+    const prompt = `
 あなたはFXチャート分析アシスタントです。
 添付されたチャート画像を最優先で読み取り、短期トレード向けに分析してください。
 
 重要:
 - 通貨ペア、現在価格、時間足は、まず画像内の表示から読み取ってください。
-- 入力値の pair / price / timeframe が "不明" の場合でも、画像から判定してください。
-- 画像内で文字や数字が確認できない項目だけ "不明" としてください。
-- 現在価格は、チャート右端の現在値・価格ラベル・最新ローソク足付近の数値を優先してください。
-- 時間足は、画像内の 1分、5分、15分、30分、1時間、4時間、日足などの表示から判断してください。
-- 通貨ペアは AUD/JPY、USD/JPY、NZD/JPY、CAD/JPY など、画像内の銘柄名から判断してください。
-- 画像から読み取れない情報を勝手に作らないでください。
+- 入力値 pair / price / timeframe は補助情報です。画像の表示が読めるなら画像を優先してください。
+- 画像で確認できない項目だけ "不明" にしてください。
+- 現在価格はチャート右端の現在値、価格ラベル、最新ローソク足付近の数値を優先してください。
+- 時間足は 1分足、5分足、15分足、1時間足、4時間足、日足 などの表示から判断してください。
+- 通貨ペアは AUD/JPY、NZD/JPY、CAD/JPY、USD/JPY、EUR/JPY など画像内の銘柄名から判断してください。
+- 読み取れない情報を勝手に作らないでください。
 
 分析ルール:
-- 画像内の移動平均線、直近高値安値、サポート、レジスタンス、ローソク足の勢いを重視してください。
-- 買い・売り・見送りのいずれかを必ず選んでください。
-- エントリー候補、利確候補、損切り候補を具体的な価格で出してください。
-- 買いの場合は原則「損切り < エントリー < 利確」。
-- 売りの場合は原則「利確 < エントリー < 損切り」。
-- リスクリワードは最低でもおおむね1:1.5以上を目安にしてください。
-- 無理に売買を提案せず、根拠が弱い場合は見送りにしてください。
-- 参考スコアは0〜100点。
-- 80点未満は原則「見送り」としてください。
-- 80点以上でも、損切り位置が不明確な場合は見送りにしてください。
+- ローソク足、移動平均線、直近高値安値、サポート、レジスタンス、勢いを重視してください。
+- 方向は "買い" / "売り" / "見送り" のどれかにしてください。
+- エントリー、利確、損切り、買い待ち価格、売り待ち価格は、可能なら具体的価格で返してください。
+- 買いなら原則「損切り < エントリー < 利確」。
+- 売りなら原則「利確 < エントリー < 損切り」。
+- 判断根拠が弱い場合は無理に売買を勧めず "見送り" にしてください。
+- score は 0〜100 の整数。
+- risk は "low" / "medium" / "high" のいずれかにしてください。
+- triggerReason は「どの価格を超えたら/割れたら発動するか」を短くわかりやすく書いてください。
+- reason は日本語で2〜5文程度にまとめてください。
 
-必ず以下を分析して返してください:
-- 通貨ペア
-- 現在価格
-- 時間足
-- 現在のトレンド
-- 買い / 売り / 見送り
-- エントリー候補
-- 利確候補
-- 損切り候補
-- 買い待ち価格
-- 売り待ち価格
-- 発動条件
-- サポートライン
-- レジスタンスライン
-- 判断理由
-- 参考スコア
-`;   
-    const response = await fetch(
+補助入力:
+- pair: ${pair}
+- price: ${price}
+- timeframe: ${timeframe}
+- economic risk: ${risk}
+`;
+
+    const schema = {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        pair: {
+          type: "string"
+        },
+        price: {
+          type: "string"
+        },
+        timeframe: {
+          type: "string"
+        },
+        direction: {
+          type: "string",
+          enum: ["買い", "売り", "見送り"]
+        },
+        trend: {
+          type: "string"
+        },
+        score: {
+          type: "number"
+        },
+        entry: {
+          type: "string"
+        },
+        takeProfit: {
+          type: "string"
+        },
+        stopLoss: {
+          type: "string"
+        },
+        buyTrigger: {
+          type: "string"
+        },
+        sellTrigger: {
+          type: "string"
+        },
+        triggerReason: {
+          type: "string"
+        },
+        support: {
+          type: "string"
+        },
+        resistance: {
+          type: "string"
+        },
+        reason: {
+          type: "string"
+        },
+        risk: {
+          type: "string",
+          enum: ["low", "medium", "high"]
+        }
+      },
+      required: [
+        "pair",
+        "price",
+        "timeframe",
+        "direction",
+        "trend",
+        "score",
+        "entry",
+        "takeProfit",
+        "stopLoss",
+        "buyTrigger",
+        "sellTrigger",
+        "triggerReason",
+        "support",
+        "resistance",
+        "reason",
+        "risk"
+      ]
+    };
+
+    const openaiResponse = await fetch(
       "https://api.openai.com/v1/responses",
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": Bearer ${apiKey}
         },
         body: JSON.stringify({
           model: "gpt-4.1-mini",
-
           input: [
+            {
+              role: "system",
+              content: [
+                {
+                  type: "input_text",
+                  text: "あなたはFXチャートを画像から分析し、必ずJSONで返すアシスタントです。"
+                }
+              ]
+            },
             {
               role: "user",
               content: [
@@ -113,158 +179,130 @@ const prompt = `
               ]
             }
           ],
-
           text: {
             format: {
               type: "json_schema",
               name: "fx_chart_analysis",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  pair: {
-                    type: "string"
-                  },
-                  price: {
-                    type: "string"
-                  },
-                  timeframe: {
-                    type: "string"
-                  },
-                  direction: {
-                     type: "string",
-                     enum: ["買い", "売り", "見送り"]
-                  },
-                  trend: {
-                    type: "string",
-                    enum: ["上昇", "下降", "レンジ", "判断困難"]
-                  },
-                  score: {
-                    type: "integer",
-                    minimum: 0,
-                    maximum: 100
-                  },
-                  entry: {
-                    type: "string"
-                  },
-                  takeProfit: {
-                    type: "string"
-                  },
-                  stopLoss: {
-                    type: "string"
-                  },
-                  buyTrigger: {
-                    type: "string"
-                  },
-                  sellTrigger: {
-                    type: "string"
-                  },
-                  triggerReason: {
-                    type: "string"
-                  },
-                  support: {
-                    type: "string"
-                  },
-                  resistance: {
-                    type: "string"
-                  },
-                  reason: {
-                    type: "string"
-                  }
-                },
-                required: [
-                  "pair",
-                  "price",
-                  "timeframe",
-                  "direction",
-                  "trend",
-                  "score",
-                  "entry",
-                  "takeProfit",
-                  "stopLoss",  
-                  "buyTrigger",
-                  "sellTrigger",
-                  "triggerReason",
-                  "support",
-                  "resistance",
-                  "reason"
-                ],
-                additionalProperties: false
-              }
+              schema: schema,
+              strict: true
             }
           }
         })
       }
     );
 
-    const data = await response.json();
+    const result =
+      await openaiResponse.json();
 
-    if (!response.ok) {
-      console.error("OpenAI API error:", data);
+    if (!openaiResponse.ok) {
+      console.error(result);
 
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify({
-          error: "AI解析でエラーが発生しました。",
-          detail: data
-        })
-      };
+      return jsonResponse(500, {
+        error:
+          result.error?.message ||
+          "OpenAI API エラー"
+      });
     }
 
-    let text = "";
+    const text =
+      extractOutputText(result);
 
-    if (data.output) {
-      for (const item of data.output) {
-        if (item.content) {
-          for (const content of item.content) {
-            if (content.type === "output_text") {
-              text += content.text;
-            }
-          }
-        }
-      }
+    if (!text) {
+      console.error(result);
+
+      return jsonResponse(500, {
+        error:
+          "AIの返答を読み取れませんでした。"
+      });
     }
 
     let analysis;
 
     try {
-      analysis = JSON.parse(text);
-    } catch (error) {
-      console.error("JSON parse error:", error, text);
+      const cleanText =
+        text
+          .replace(/```json|```/g, "")
+          .trim();
 
-      analysis = {
-        direction: "見送り",
-        trend: "判断困難",
-        score: 0,
-        entry: "判断困難",
-        takeProfit: "判断困難",
-        stopLoss: "判断困難",
-        support: "判断困難",
-        resistance: "判断困難",
-        reason: "AIの分析結果を読み取れませんでした。"
-      };
+      analysis =
+        JSON.parse(cleanText);
+
+    } catch (parseError) {
+      console.error(
+        "JSON parse error:",
+        parseError,
+        text
+      );
+
+      return jsonResponse(500, {
+        error:
+          "AIの返答JSONを解析できませんでした。"
+      });
     }
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        analysis
-      })
-    };
+    return jsonResponse(200, {
+      success: true,
+      analysis
+    });
 
   } catch (error) {
     console.error(error);
 
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: "サーバーエラーが発生しました。",
-        detail: error.message
-      })
-    };
+    return jsonResponse(500, {
+      error:
+        error.message ||
+        "サーバーエラー"
+    });
   }
-};                
+};
+
+function extractOutputText(result) {
+  if (
+    typeof result.output_text === "string" &&
+    result.output_text.trim()
+  ) {
+    return result.output_text.trim();
+  }
+
+  if (Array.isArray(result.output)) {
+    for (const item of result.output) {
+      if (!Array.isArray(item.content)) {
+        continue;
+      }
+
+      for (const part of item.content) {
+        if (
+          typeof part.text === "string" &&
+          part.text.trim()
+        ) {
+          return part.text.trim();
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "Content-Type",
+    "Access-Control-Allow-Methods":
+      "POST, OPTIONS"
+  };
+}
+
+function jsonResponse(statusCode, data) {
+  return {
+    statusCode,
+    headers: {
+      ...corsHeaders(),
+      "Content-Type":
+        "application/json"
+    },
+    body:
+      JSON.stringify(data)
+  };
+}
