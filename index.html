@@ -734,7 +734,7 @@ document
       pair: pair,
 
       price:
-        price.toFixed(3),
+        price: Number.isFinite(price) ? price.toFixed(3) : "不明",
 
       rate:
         score + "%",
