@@ -664,10 +664,14 @@ document
   .textContent =
   analysis.triggerReason || "-";    
 
-    document
-      .getElementById("riskReward")
-      .textContent =
-      analysis.riskReward || "-";
+const reward = Math.abs(takeProfit - entry);
+const riskAmount = Math.abs(entry - stopLoss);
+const rr = riskAmount > 0 ? (reward / riskAmount).toFixed(2) : "-";
+
+document
+  .getElementById("riskReward")
+  .textContent =
+  rr === "-" ? "-" : `1 : ${rr}`;   
 
     const judgement =
       document.getElementById(
