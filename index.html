@@ -691,7 +691,9 @@ document
     if(
       score >= 80 &&
       direction !== "見送り" &&
-      risk !== "high"
+      risk !== "high" && 
+      rr !== "-" &&
+      Number.parseFloat(rr) >= 1.0
     ){
 
       judgement.className =
