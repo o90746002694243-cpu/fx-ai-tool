@@ -4,503 +4,519 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FX AI Tool</title>
-
 <style>
-*{
-box-sizing:border-box;
-}
-
+*{box-sizing:border-box}
 body{
-margin:0;
-padding:18px;
-min-height:100vh;
-font-family:Arial,"Yu Gothic",sans-serif;
-background:linear-gradient(135deg,#08111f,#172944);
-color:#fff;
+  margin:0;
+  padding:18px;
+  min-height:100vh;
+  font-family:Arial,"Yu Gothic",sans-serif;
+  background:linear-gradient(135deg,#08111f,#172944);
+  color:#fff;
 }
-
-.container{
-max-width:780px;
-margin:auto;
-}
-
+.container{max-width:860px;margin:auto}
 .card{
-background:#182a44;
-padding:24px;
-border-radius:22px;
-border:1px solid rgba(255,255,255,.12);
-box-shadow:0 18px 50px rgba(0,0,0,.35);
+  background:#182a44;
+  padding:24px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 18px 50px rgba(0,0,0,.35);
 }
-
-h1{
-text-align:center;
-font-size:34px;
-margin:0 0 18px;
-}
-
+h1{text-align:center;font-size:34px;margin:0 0 18px}
 .description{
-background:#4e6787;
-padding:15px;
-border-radius:14px;
-font-weight:bold;
-line-height:1.6;
+  background:#4e6787;
+  padding:15px;
+  border-radius:14px;
+  font-weight:bold;
+  line-height:1.6;
 }
-
 label{
-display:block;
-margin-top:16px;
-margin-bottom:8px;
-font-weight:bold;
+  display:block;
+  margin-top:16px;
+  margin-bottom:8px;
+  font-weight:bold;
 }
-
-input,
-select{
-width:100%;
-padding:14px;
-border-radius:12px;
-border:1px solid #7f90a6;
-background:#0d1c30;
-color:white;
-font-size:17px;
+input,select,textarea{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #7f90a6;
+  background:#0d1c30;
+  color:white;
+  font-size:17px;
 }
-
-.input-grid,
-.result-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:12px;
+.input-grid,.result-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
 }
-
 button{
-width:100%;
-padding:16px;
-margin-top:18px;
-border:0;
-border-radius:12px;
-font-size:19px;
-font-weight:bold;
-cursor:pointer;
-color:white;
-background:linear-gradient(90deg,#0fc5d8,#24e2df);
+  width:100%;
+  padding:16px;
+  margin-top:18px;
+  border:0;
+  border-radius:12px;
+  font-size:19px;
+  font-weight:bold;
+  cursor:pointer;
+  color:white;
+  background:linear-gradient(90deg,#0fc5d8,#24e2df);
 }
-
-.secondary{
-background:#415a77;
+button:disabled{
+  opacity:.7;
+  cursor:not-allowed;
 }
-
-.danger{
-background:#8b3d4b;
-}
-
+.secondary{background:#415a77}
+.danger{background:#8b3d4b}
 .result{
-display:none;
-margin-top:22px;
-padding:18px;
-border-radius:16px;
-background:#0d1c30;
+  display:none;
+  margin-top:22px;
+  padding:18px;
+  border-radius:16px;
+  background:#0d1c30;
 }
-
 .signal{
-font-size:30px;
-font-weight:bold;
-text-align:center;
-margin-bottom:16px;
+  font-size:30px;
+  font-weight:bold;
+  text-align:center;
+  margin-bottom:16px;
 }
-
-.buy{
-color:#49e79c;
-}
-
-.sell{
-color:#ff6d8e;
-}
-
-.wait{
-color:#ffd166;
-}
-
+.buy{color:#49e79c}
+.sell{color:#ff6d8e}
+.wait{color:#ffd166}
 .score{
-background:#1d3557;
-padding:14px;
-border-radius:12px;
-margin-bottom:16px;
+  background:#1d3557;
+  padding:14px;
+  border-radius:12px;
+  margin-bottom:16px;
 }
-
 .bar{
-height:12px;
-background:#09131f;
-border-radius:30px;
-overflow:hidden;
-margin-top:8px;
+  height:12px;
+  background:#09131f;
+  border-radius:30px;
+  overflow:hidden;
+  margin-top:8px;
 }
-
 .fill{
-height:100%;
-width:0%;
-background:linear-gradient(90deg,#18cfe3,#52f1a8);
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#18cfe3,#52f1a8);
 }
-
 .item{
-background:#1d3557;
-padding:14px;
-border-radius:12px;
+  background:#1d3557;
+  padding:14px;
+  border-radius:12px;
 }
-
 .item span{
-display:block;
-font-size:13px;
-color:#b8c6d3;
-margin-bottom:5px;
+  display:block;
+  font-size:13px;
+  color:#b8c6d3;
+  margin-bottom:5px;
 }
-
 .item strong{
-font-size:20px;
+  font-size:20px;
+  word-break:break-word;
 }
-
 .judge{
-margin-top:15px;
-padding:14px;
-border-radius:12px;
-text-align:center;
-font-weight:bold;
+  margin-top:15px;
+  padding:14px;
+  border-radius:12px;
+  text-align:center;
+  font-weight:bold;
+  line-height:1.6;
 }
-
 .ok{
-background:rgba(20,180,110,.2);
-border:1px solid #4be89e;
+  background:rgba(20,180,110,.2);
+  border:1px solid #4be89e;
 }
-
 .ng{
-background:rgba(255,193,7,.12);
-border:1px solid #ffd166;
+  background:rgba(255,193,7,.12);
+  border:1px solid #ffd166;
 }
-
+.reason-box{
+  margin-top:16px;
+  background:#1d3557;
+  padding:14px;
+  border-radius:12px;
+  line-height:1.7;
+  white-space:pre-wrap;
+}
 .history{
-margin-top:26px;
-border-top:1px solid rgba(255,255,255,.15);
-padding-top:18px;
+  margin-top:26px;
+  border-top:1px solid rgba(255,255,255,.15);
+  padding-top:18px;
 }
-
 .history-row{
-display:grid;
-grid-template-columns:1.6fr 1fr 1fr;
-gap:8px;
-padding:10px 0;
-border-bottom:1px solid rgba(255,255,255,.08);
-font-size:13px;
+  display:grid;
+  grid-template-columns:1.6fr 1fr 1fr;
+  gap:8px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  font-size:13px;
 }
-
 .note{
-margin-top:18px;
-font-size:12px;
-color:#cdd6df;
-line-height:1.6;
+  margin-top:18px;
+  font-size:12px;
+  color:#cdd6df;
+  line-height:1.6;
 }
-
+.small{
+  font-size:13px;
+  color:#cdd6df;
+  margin-top:6px;
+}
 @media(max-width:600px){
-
-.input-grid,
-.result-grid,
-.history-row{
-
-grid-template-columns:1fr;
-
-}
-
+  .input-grid,.result-grid,.history-row{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 </head>
-
 <body>
-
 <div class="container">
-<div class="card">
+  <div class="card">
+    <h1>📈 FX AI Tool</h1>
 
-<h1>📈 FX AI Tool</h1>
+    <div class="description">
+      チャート画像を1枚選ぶだけで、AIが通貨ペア・現在価格・時間足・エントリー候補を分析します。<br>
+      通貨ペア・現在価格・時間足は空欄でもOKです。画像から自動判定を優先します。
+    </div>
 
-<div class="description">
-相場の流れ・勢い・時間足・経済指標リスクを入力すると、
-参考勝率・エントリー・利確・損切りを表示します。
-</div>
+    <label for="pair">通貨ペア（空でもOK）</label>
+    <select id="pair">
+      <option value="">未選択</option>
+      <option value="AUD/JPY">AUD/JPY</option>
+      <option value="NZD/JPY">NZD/JPY</option>
+      <option value="CAD/JPY">CAD/JPY</option>
+      <option value="USD/JPY">USD/JPY</option>
+      <option value="EUR/JPY">EUR/JPY</option>
+    </select>
 
-<label for="pair">通貨ペア</label>
+    <label for="price">現在価格（空でもOK）</label>
+    <input id="price" type="number" step="0.001" placeholder="例：102.350">
 
-<select id="pair">
-<option>AUD/JPY</option>
-<option>NZD/JPY</option>
-<option>CAD/JPY</option>
-<option>USD/JPY</option>
-<option>EUR/JPY</option>
-</select>
+    <div class="input-grid">
+      <div>
+        <label for="timeframe">時間足（空でもOK）</label>
+        <select id="timeframe">
+          <option value="">未選択</option>
+          <option value="5分足">5分足</option>
+          <option value="15分足">15分足</option>
+          <option value="1時間足">1時間足</option>
+          <option value="4時間足">4時間足</option>
+          <option value="日足">日足</option>
+        </select>
+      </div>
 
-<label for="price">現在価格</label>
+      <div>
+        <label for="risk">経済指標リスク</label>
+        <select id="risk">
+          <option value="low">低い</option>
+          <option value="medium" selected>普通</option>
+          <option value="high">高い</option>
+        </select>
+      </div>
+    </div>
 
-<input
-id="price"
-type="number"
-step="0.001"
-placeholder="例：102.350"
->
+    <label for="chartImage">チャート画像</label>
+    <input
+      id="chartImage"
+      type="file"
+      accept="image/png,image/jpeg,image/webp"
+      onchange="previewChart()"
+    >
 
-<div class="input-grid">
+    <img
+      id="chartPreview"
+      alt="チャート画像"
+      style="
+        display:none;
+        width:100%;
+        max-height:450px;
+        object-fit:contain;
+        margin-top:14px;
+        padding:8px;
+        border-radius:12px;
+        background:#09131f;
+      "
+    >
 
-<div>
-<label for="trend">現在の流れ</label>
+    <div id="chartStatus" class="small">画像が選択されていません。</div>
+    <button type="button" id="analyzeButton" onclick="analyze()">
+      AI分析する
+    </button>
 
-<select id="trend">
-<option value="up">上昇傾向</option>
-<option value="down">下降傾向</option>
-<option value="range">レンジ</option>
-</select>
-</div>
+    <button type="button" class="secondary" onclick="saveTrade()">
+      分析結果を保存
+    </button>
 
-<div>
-<label for="strength">勢い</label>
+    <button type="button" class="danger" onclick="clearHistory()">
+      保存履歴を削除
+    </button>
 
-<select id="strength">
-<option value="strong">強い</option>
-<option value="normal" selected>普通</option>
-<option value="weak">弱い</option>
-</select>
-</div>
+    <div id="result" class="result">
+      <div id="signal" class="signal"></div>
 
-<div>
-<label for="timeframe">時間足</label>
+      <div class="score">
+        <strong>総合スコア：<span id="scoreText">0</span>点</strong>
+        <div class="bar">
+          <div id="scoreFill" class="fill"></div>
+        </div>
+      </div>
 
-<select id="timeframe">
-<option value="5">5分足</option>
-<option value="15" selected>15分足</option>
-<option value="60">1時間足</option>
-<option value="240">4時間足</option>
-</select>
-</div>
+      <div class="result-grid">
+        <div class="item">
+          <span>参考勝率</span>
+          <strong id="winRate">-</strong>
+        </div>
 
-<div>
-<label for="risk">経済指標リスク</label>
+        <div class="item">
+          <span>通貨ペア</span>
+          <strong id="resultPair">-</strong>
+        </div>
 
-<select id="risk">
-<option value="low">低い</option>
-<option value="medium" selected>普通</option>
-<option value="high">高い</option>
-</select>
-</div>
+        <div class="item">
+          <span>現在価格</span>
+          <strong id="currentPrice">-</strong>
+        </div>
 
-</div>
+        <div class="item">
+          <span>時間足</span>
+          <strong id="resultTimeframe">-</strong>
+        </div>
 
-<label for="chartImage">チャート画像</label>
+        <div class="item">
+          <span>トレンド</span>
+          <strong id="trendText">-</strong>
+        </div>
 
-<input
-id="chartImage"
-type="file"
-accept="image/png,image/jpeg,image/webp"
-onchange="previewChart()"
->
+        <div class="item">
+          <span>エントリー目安</span>
+          <strong id="entry">-</strong>
+        </div>
 
-<img
-id="chartPreview"
-alt="チャート画像"
-style="
-display:none;
-width:100%;
-max-height:450px;
-object-fit:contain;
-margin-top:14px;
-padding:8px;
-border-radius:12px;
-background:#09131f;
-"
->
+        <div class="item">
+          <span>利確目安</span>
+          <strong id="takeProfit">-</strong>
+        </div>
 
-<div
-id="chartStatus"
-style="
-margin-top:8px;
-font-size:13px;
-color:#cdd6df;
-"
->
-画像が選択されていません。
-</div>
+        <div class="item">
+          <span>損切り目安</span>
+          <strong id="stopLoss">-</strong>
+        </div>
 
-<button type="button" onclick="analyze()">
-AI分析する
-</button>
+        <div class="item">
+          <span>買い待ち価格</span>
+          <strong id="buyTrigger">-</strong>
+        </div>
 
-<button
-type="button"
-class="secondary"
-onclick="saveTrade()"
->
-分析結果を保存
-</button>
+        <div class="item">
+          <span>売り待ち価格</span>
+          <strong id="sellTrigger">-</strong>
+        </div>
 
-<button
-type="button"
-class="danger"
-onclick="clearHistory()"
->
-保存履歴を削除
-</button>
+        <div class="item">
+          <span>発動条件</span>
+          <strong id="triggerReason">-</strong>
+        </div>
 
-<div id="result" class="result">
+        <div class="item">
+          <span>サポート</span>
+          <strong id="supportLine">-</strong>
+        </div>
 
-<div id="signal" class="signal"></div>
+        <div class="item">
+          <span>レジスタンス</span>
+          <strong id="resistanceLine">-</strong>
+        </div>
 
-<div class="score">
+        <div class="item">
+          <span>リスク・リワード</span>
+          <strong id="riskReward">-</strong>
+        </div>
+      </div>
 
-<strong>
-総合スコア：
-<span id="scoreText">0</span>点
-</strong>
+      <div id="judgement" class="judge"></div>
 
-<div class="bar">
-<div id="scoreFill" class="fill"></div>
-</div>
+      <div class="reason-box">
+        <strong>判断理由</strong><br>
+        <span id="reasonText">-</span>
+      </div>
 
-</div>
+      <div class="history">
+        <h3>保存履歴</h3>
+        <div id="historyList"></div>
+      </div>
+    </div>
 
-<div class="result-grid">
-
-<div class="item">
-<span>参考勝率</span>
-<strong id="winRate">-</strong>
-</div>
-
-<div class="item">
-<span>通貨ペア</span>
-<strong id="resultPair">-</strong>
-</div>
-
-<div class="item">
-<span>エントリー目安</span>
-<strong id="entry">-</strong>
-</div>
-
-<div class="item">
-<span>利確目安</span>
-<strong id="takeProfit">-</strong>
-</div>
-
-<div class="item">
-<span>損切り目安</span>  
-<strong id="stopLoss">-</strong>
-</div>
-
-<div class="item">
-  <span>買い待ち価格</span>
-  <strong id="buyTrigger">-</strong>
-</div>
-
-<div class="item">
-  <span>売り待ち価格</span>
-  <strong id="sellTrigger">-</strong>
-</div>
-
-<div class="item">
-  <span>発動条件</span>
-  <strong id="triggerReason">-</strong>
-</div>  
-<div class="item">
-<span>リスク・リワード</span>
-<strong id="riskReward">-</strong>
-</div>
-
-</div>
-
-<div id="judgement" class="judge"></div>
-
-<div class="history">
-
-<h3>保存履歴</h3>
-
-<div id="historyList"></div>
-
-</div>
-
-</div>
-
-<div class="note">
-※現在の画像機能はプレビュー表示までです。
-画像内容を本物のAIが解析する機能は、APIキーを安全に管理する仕組みを追加してから接続します。
-</div>
-
-</div>
+    <div class="note">
+      ※画像をAIに送って分析します。<br>
+      ※OpenAI APIキーは Netlify の環境変数に設定してください。
+    </div>
+  </div>
 </div>
 
 <script>
-
 let lastAnalysis = null;
 
 function previewChart(){
+  const input = document.getElementById("chartImage");
+  const preview = document.getElementById("chartPreview");
+  const status = document.getElementById("chartStatus");
+  const file = input.files[0];
 
-const input =
-document.getElementById("chartImage");
+  if(!file){
+    preview.style.display = "none";
+    preview.removeAttribute("src");
+    status.textContent = "画像が選択されていません。";
+    return;
+  }
 
-const preview =
-document.getElementById("chartPreview");
+  if(!file.type.startsWith("image/")){
+    alert("画像ファイルを選択してください。");
+    input.value = "";
+    preview.style.display = "none";
+    preview.removeAttribute("src");
+    status.textContent = "画像が選択されていません。";
+    return;
+  }
 
-const status =
-document.getElementById("chartStatus");
+  if(file.size > 10 * 1024 * 1024){
+    alert("画像は10MB以下にしてください。");
+    input.value = "";
+    preview.style.display = "none";
+    preview.removeAttribute("src");
+    status.textContent = "画像が選択されていません。";
+    return;
+  }
 
-const file = input.files[0];
-
-if(!file){
-
-preview.style.display = "none";
-
-preview.removeAttribute("src");
-
-status.textContent =
-"画像が選択されていません。";
-
-return;
-
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+  status.textContent = "チャート画像を読み込みました。";
 }
 
-if(!file.type.startsWith("image/")){
+function parseNum(value){
+  if(value === null || value === undefined) return null;
 
-alert("画像ファイルを選択してください。");
+  const cleaned =
+    String(value)
+      .replace(/,/g,"")
+      .trim();
 
-input.value = "";
+  if(
+    !cleaned ||
+    cleaned === "-" ||
+    cleaned === "不明"
+  ){
+    return null;
+  }
 
-return;
+  const num =
+    Number.parseFloat(cleaned);
 
+  return Number.isFinite(num)
+    ? num
+    : null;
 }
 
-if(file.size > 10 * 1024 * 1024){
+function formatLevel(value){
+  const num = parseNum(value);
 
-alert("画像は10MB以下にしてください。");
-
-input.value = "";
-
-return;
-
+  return num !== null
+    ? num.toFixed(3)
+    : (value || "-");
 }
 
-preview.src = URL.createObjectURL(file);
+function normalizeTimeframeValue(value){
+  const v =
+    String(value || "").trim();
 
-preview.style.display = "block";
+  if(!v) return "";
 
-status.textContent =
-"チャート画像を読み込みました。";
+  if(["5","5m","5分","5分足"].includes(v)){
+    return "5分足";
+  }
 
+  if(["15","15m","15分","15分足"].includes(v)){
+    return "15分足";
+  }
+
+  if(["60","1h","1時間","1時間足"].includes(v)){
+    return "1時間足";
+  }
+
+  if(["240","4h","4時間","4時間足"].includes(v)){
+    return "4時間足";
+  }
+
+  if(["day","1d","日足"].includes(v)){
+    return "日足";
+  }
+
+  return v;
 }
 
+function computeRiskReward(
+  entry,
+  takeProfit,
+  stopLoss
+){
+  const entryNum = parseNum(entry);
+  const tpNum = parseNum(takeProfit);
+  const slNum = parseNum(stopLoss);
+
+  if(
+    entryNum === null ||
+    tpNum === null ||
+    slNum === null
+  ){
+    return {
+      text: "-",
+      value: null
+    };
+  }
+
+  const reward =
+    Math.abs(tpNum - entryNum);
+
+  const risk =
+    Math.abs(entryNum - slNum);
+
+  if(
+    !Number.isFinite(reward) ||
+    !Number.isFinite(risk) ||
+    risk <= 0
+  ){
+    return {
+      text: "-",
+      value: null
+    };
+  }
+
+  const rr = reward / risk;
+
+  return {
+    text: `1 : ${rr.toFixed(2)}`,
+    value: rr
+  };
+}
 async function analyze(){
+  const pair =
+    document.getElementById("pair").value || "不明";
 
- const pair =
-  document.getElementById("pair").value || "不明";
+  const priceInput =
+    document.getElementById("price").value;
 
-const priceInput =
-  document.getElementById("price").value;
+  const parsedPrice =
+    Number.parseFloat(priceInput);
 
-const price =
-  priceInput
-    ? Number.parseFloat(priceInput)
-    : "不明";
+  const price =
+    Number.isFinite(parsedPrice)
+      ? parsedPrice
+      : null;
 
-const timeframe =
-  document.getElementById("timeframe").value || "不明";
+  const timeframe =
+    document.getElementById("timeframe").value || "不明";
 
   const risk =
     document.getElementById("risk").value;
@@ -514,18 +530,17 @@ const timeframe =
   }
 
   const button =
-    document.querySelector(
-      'button[onclick="analyze()"]'
-    );
+    document.getElementById("analyzeButton");
+
+  const chartStatus =
+    document.getElementById("chartStatus");
 
   button.disabled = true;
   button.textContent = "AI分析中...";
 
   try{
-
-    const image = await new Promise(
-      function(resolve,reject){
-
+    const image =
+      await new Promise(function(resolve,reject){
         const reader = new FileReader();
 
         reader.onload = function(){
@@ -541,38 +556,41 @@ const timeframe =
         };
 
         reader.readAsDataURL(file);
+      });
 
-      }
-    );
+    const response =
+      await fetch(
+        "/.netlify/functions/analyze-chart",
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            image:image,
+            pair:pair,
+            price:
+              Number.isFinite(price)
+                ? price.toFixed(3)
+                : "不明",
+            timeframe:timeframe,
+            risk:risk
+          })
+        }
+      );
 
-    const response = await fetch(
-      "/.netlify/functions/analyze-chart",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          image: image,
-          pair: pair,
-          price: Number.isFinite(price) ? price.toFixed(3) : "不明",
-          timeframe: timeframe
-        })
-      }
-    );
-
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if(!response.ok){
-      console.error(data);
-
       throw new Error(
         data.error ||
         "AI分析に失敗しました。"
       );
     }
 
-    const analysis = data.analysis;
+    const analysis =
+      data.analysis || {};
 
     const score =
       Number(analysis.score) || 0;
@@ -580,11 +598,59 @@ const timeframe =
     const direction =
       analysis.direction || "見送り";
 
+    const detectedPair =
+      analysis.pair ||
+      pair ||
+      "不明";
+
+    const detectedPrice =
+      analysis.price ||
+      (
+        Number.isFinite(price)
+          ? price.toFixed(3)
+          : "不明"
+      );
+
+    const detectedTimeframe =
+      analysis.timeframe ||
+      timeframe ||
+      "不明";
+
+    const trend =
+      analysis.trend || "不明";
+
+    const entry =
+      analysis.entry || "-";
+
+    const takeProfit =
+      analysis.takeProfit || "-";
+
+    const stopLoss =
+      analysis.stopLoss || "-";
+
+    const reason =
+      analysis.reason ||
+      "判断理由なし";
+
+    const buyTrigger =
+      analysis.buyTrigger || "-";
+
+    const sellTrigger =
+      analysis.sellTrigger || "-";
+
+    const triggerReason =
+      analysis.triggerReason || "-";
+
+    const support =
+      analysis.support || "-";
+
+    const resistance =
+      analysis.resistance || "-";
+
     const signal =
       document.getElementById("signal");
 
     if(direction === "買い"){
-
       signal.textContent =
         "▲ 買い優勢";
 
@@ -592,7 +658,6 @@ const timeframe =
         "signal buy";
 
     }else if(direction === "売り"){
-
       signal.textContent =
         "▼ 売り優勢";
 
@@ -600,18 +665,17 @@ const timeframe =
         "signal sell";
 
     }else{
-
       signal.textContent =
         "⏸ 見送り";
 
       signal.className =
         "signal wait";
-
     }
 
     document
       .getElementById("scoreText")
-      .textContent = String(score);
+      .textContent =
+      String(score);
 
     document
       .getElementById("scoreFill")
@@ -629,130 +693,181 @@ const timeframe =
     document
       .getElementById("resultPair")
       .textContent =
-      analysis.pair || pair || "不明";
-     
-    if (analysis.pair && analysis.pair !== "不明") {
-      document.getElementById("pair").value = analysis.pair;
-    }
+      detectedPair;
 
-    if (analysis.price && analysis.price !== "不明") {
-      document.getElementById("price").value = analysis.price;
-    }
+    document
+      .getElementById("currentPrice")
+      .textContent =
+      formatLevel(detectedPrice);
 
-    if (analysis.timeframe && analysis.timeframe !== "不明") {
-      document.getElementById("timeframe").value = analysis.timeframe;
-    }
+    document
+      .getElementById("resultTimeframe")
+      .textContent =
+      detectedTimeframe || "-";
+
+    document
+      .getElementById("trendText")
+      .textContent =
+      trend;
 
     document
       .getElementById("entry")
       .textContent =
-      analysis.entry || "判断困難";
+      formatLevel(entry);
 
     document
       .getElementById("takeProfit")
       .textContent =
-      analysis.takeProfit ||
-      "判断困難";
+      formatLevel(takeProfit);
 
     document
       .getElementById("stopLoss")
       .textContent =
-      analysis.stopLoss ||
-      "判断困難";
-document
-  .getElementById("buyTrigger")
-  .textContent =
-  analysis.buyTrigger || "-";
+      formatLevel(stopLoss);
 
-document
-  .getElementById("sellTrigger")
-  .textContent =
-  analysis.sellTrigger || "-";
+    document
+      .getElementById("buyTrigger")
+      .textContent =
+      formatLevel(buyTrigger);
 
-document
-  .getElementById("triggerReason")
-  .textContent =
-  analysis.triggerReason || "-";    
+    document
+      .getElementById("sellTrigger")
+      .textContent =
+      formatLevel(sellTrigger);
 
-const entryNum = Number.parseFloat(analysis.entry);
-const takeProfitNum = Number.parseFloat(analysis.takeProfit);
-const stopLossNum = Number.parseFloat(analysis.stopLoss);
+    document
+      .getElementById("triggerReason")
+      .textContent =
+      triggerReason;
 
-const reward = Math.abs(takeProfitNum - entryNum);
-const riskAmount = Math.abs(entryNum - stopLossNum);
+    document
+      .getElementById("supportLine")
+      .textContent =
+      formatLevel(support);
 
-const rr =
-  Number.isFinite(reward) &&
-  Number.isFinite(riskAmount) &&
-  riskAmount > 0
-    ? (reward / riskAmount).toFixed(2)
-    : "-";
+    document
+      .getElementById("resistanceLine")
+      .textContent =
+      formatLevel(resistance);
 
-document
-  .getElementById("riskReward")
-  .textContent =
-  rr === "-" ? "-" : `1 : ${rr}`;
-
-    const judgement =
-      document.getElementById(
-        "judgement"
-      );
+    document
+      .getElementById("reasonText")
+      .textContent =
+      reason;
 
     if(
+      detectedPair &&
+      detectedPair !== "不明"
+    ){
+      document
+        .getElementById("pair")
+        .value =
+        detectedPair;
+    }
+
+    const detectedPriceNum =
+      parseNum(detectedPrice);
+
+    if(detectedPriceNum !== null){
+      document
+        .getElementById("price")
+        .value =
+        detectedPriceNum.toFixed(3);
+    }
+
+    const normalizedTimeframe =
+      normalizeTimeframeValue(
+        detectedTimeframe
+      );
+
+    if(normalizedTimeframe){
+      document
+        .getElementById("timeframe")
+        .value =
+        normalizedTimeframe;
+    }
+
+    const rr =
+      computeRiskReward(
+        entry,
+        takeProfit,
+        stopLoss
+      );
+
+    document
+      .getElementById("riskReward")
+      .textContent =
+      rr.text;
+
+    const judgement =
+      document.getElementById("judgement");
+
+    const go =
       score >= 80 &&
       direction !== "見送り" &&
-      risk !== "high" && 
-      rr !== "-" &&
-      Number.parseFloat(rr) >= 1.0
-    ){
+      risk !== "high" &&
+      rr.value !== null &&
+      rr.value >= 1.0;
 
+    if(go){
       judgement.className =
         "judge ok";
 
       judgement.textContent =
-        "🚀 GO！AIスコア80以上：" +
-        direction +
-        "エントリー候補です。";
+        "🚀 GO！AIスコア80以上 かつ リスクリワード1.0以上";
 
     }else{
-
       judgement.className =
         "judge ng";
 
       judgement.textContent =
-        "⚠️ AIスコア80未満、見送り判定、または指標リスクあり：見送り推奨です。";
-
+        "⚠ 見送り推奨：スコア・方向・経済指標リスク・リスクリワードを再確認";
     }
-
-    lastAnalysis = {
-
-      date:
-        new Date().toLocaleString(
-          "ja-JP"
-        ),
-
-      pair: pair,
-
-      price:
-        price: Number.isFinite(price) ? price.toFixed(3) : "不明",
-
-      rate:
-        score + "%",
-
-      direction:
-        direction
-
-    };
 
     document
       .getElementById("result")
       .style.display =
       "block";
 
-    loadHistory();
+    chartStatus.textContent =
+      "AI分析が完了しました。";
+
+    lastAnalysis = {
+      savedAt:
+        new Date()
+          .toLocaleString("ja-JP"),
+
+      pair:
+        detectedPair,
+
+      price:
+        formatLevel(
+          detectedPrice
+        ),
+
+      timeframe:
+        detectedTimeframe,
+
+      direction:
+        direction,
+
+      score:
+        score,
+
+      entry:
+        formatLevel(entry),
+
+      takeProfit:
+        formatLevel(takeProfit),
+
+      stopLoss:
+        formatLevel(stopLoss),
+
+      riskReward:
+        rr.text
+    };
 
   }catch(error){
-
     console.error(error);
 
     alert(
@@ -760,105 +875,106 @@ document
       error.message
     );
 
-  }finally{
+    chartStatus.textContent =
+      "AI分析に失敗しました。";
 
+  }finally{
     button.disabled = false;
     button.textContent = "AI分析する";
-
   }
-
 }
 function saveTrade(){
+  if(!lastAnalysis){
+    alert("先にAI分析をしてください。");
+    return;
+  }
 
-if(!lastAnalysis){
+  const list =
+    JSON.parse(
+      localStorage.getItem("fx_ai_history") || "[]"
+    );
 
-alert("先にAI分析を実行してください。");
+  list.unshift(lastAnalysis);
 
-return;
+  localStorage.setItem(
+    "fx_ai_history",
+    JSON.stringify(
+      list.slice(0,30)
+    )
+  );
 
-}
+  renderHistory();
 
-const history =
-JSON.parse(
-localStorage.getItem("fxHistory") || "[]"
-);
-
-history.unshift(lastAnalysis);
-
-localStorage.setItem(
-"fxHistory",
-JSON.stringify(
-history.slice(0,20)
-)
-);
-
-loadHistory();
-
-alert("分析結果を保存しました。");
-
-}
-
-function loadHistory(){
-
-const history =
-JSON.parse(
-localStorage.getItem("fxHistory") || "[]"
-);
-
-const box =
-document.getElementById("historyList");
-
-if(history.length === 0){
-
-box.innerHTML =
-"<p>保存履歴はありません。</p>";
-
-return;
-
-}
-
-box.innerHTML =
-history.map(function(item){
-
-return `
-<div class="history-row">
-
-<div>${item.date}</div>
-
-<div>
-${item.pair}・${item.direction}
-</div>
-
-<div>${item.rate}</div>
-
-</div>
-`;
-
-}).join("");
-
+  alert("保存しました。");
 }
 
 function clearHistory(){
+  if(
+    !confirm(
+      "保存履歴を削除しますか？"
+    )
+  ){
+    return;
+  }
 
-if(
-!confirm(
-"保存履歴を削除しますか？"
-)
-){
+  localStorage.removeItem(
+    "fx_ai_history"
+  );
 
-return;
-
+  renderHistory();
 }
 
-localStorage.removeItem("fxHistory");
+function renderHistory(){
+  const history =
+    JSON.parse(
+      localStorage.getItem("fx_ai_history") || "[]"
+    );
 
-loadHistory();
+  const historyList =
+    document.getElementById(
+      "historyList"
+    );
 
+  if(!history.length){
+    historyList.innerHTML =
+      `<div class="small">
+        保存履歴はありません。
+      </div>`;
+
+    return;
+  }
+
+  historyList.innerHTML =
+    history
+      .map(function(item){
+        return `
+          <div class="history-row">
+            <div>
+              <strong>
+                ${item.savedAt}
+              </strong><br>
+
+              ${item.pair}
+              /
+              ${item.timeframe}
+            </div>
+
+            <div>
+              ${item.direction}<br>
+              ${item.score}点
+            </div>
+
+            <div>
+              Entry ${item.entry}<br>
+              RR ${item.riskReward}
+            </div>
+          </div>
+        `;
+      })
+      .join("");
 }
 
-loadHistory();
-
+renderHistory();
 </script>
-
 </body>
-</html>
+</html>  
