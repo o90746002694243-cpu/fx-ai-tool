@@ -706,14 +706,14 @@ async function analyze(){
     const signal =
       document.getElementById("signal");
 
-    if(score >= 80 && winRate >= 80 && direction === "買い"){
+    if(score >= 80 && winRate >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "買い"){
       signal.textContent =
         "▲ 買い優勢";
 
       signal.className =
         "signal buy";
 
-   　}else if(score >= 80 && winRate >= 80 && direction === "売り"){
+   　}else if(score >= 80 && winRate >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "売り"){
       signal.textContent =
         "▼ 売り優勢";
 
