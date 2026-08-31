@@ -706,14 +706,14 @@ async function analyze(){
     const signal =
       document.getElementById("signal");
 
-    if(direction === "買い"){
+    if(score >= 80 && winRate >= 80 && direction === "買い"){
       signal.textContent =
         "▲ 買い優勢";
 
       signal.className =
         "signal buy";
 
-    }else if(direction === "売り"){
+   　}else if(score >= 80 && winRate >= 80 && direction === "売り"){
       signal.textContent =
         "▼ 売り優勢";
 
@@ -870,7 +870,7 @@ async function analyze(){
         "judge ok";
 
       judgement.textContent =
-        "🚀 GO！AIスコア80以上 かつ リスクリワード1.0以上";
+        "🚀 GO！AIスコア80以上 かつ リスクリワード1.5以上";
 
     }else{
       judgement.className =
