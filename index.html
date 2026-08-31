@@ -650,9 +650,11 @@ async function analyze(){
 
     const score =
       Number(analysis.score) || 0;
-    
-    const shouldNotify = 
-      score >= 80;
+
+    const winRate = score;
+
+    const shouldNotify =
+      score >= 80 && winRate >= 80;
 
     const direction =
       analysis.direction || "見送り";
