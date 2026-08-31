@@ -161,7 +161,7 @@ exports.handler = async function(event) {
               content: [
                 {
                   type: "input_text",
-                  text: "あなたはFXチャートを画像から分析し、必ずJSONで返すアシスタントです。"
+                  text: "あなたはFXチャート分析アシスタントです。画像からトレンド、現在価格、サポート、レジスタンスを分析し、必ずJSONで返してください。entry、takeProfit、stopLossは必ず数値で返してください。見送り判定の場合でも、条件成立時に使う参考値としてentry、takeProfit、stopLossを必ず数値で設定してください。riskRewardも必ず数値で返してください。"
                 }
               ]
             },
