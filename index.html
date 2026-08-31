@@ -689,10 +689,14 @@ async function analyze(){
       "判断理由なし";
 
     const buyTrigger =
-      analysis.buyTrigger || "-";
+      analysis.buyTrigger ||
+      analysis.resistance ||
+      "-";
 
     const sellTrigger =
-      analysis.sellTrigger || "-";
+      analysis.sellTrigger ||
+      analysis.support ||
+      "-";
 
     const triggerReason =
       analysis.triggerReason || "-";
