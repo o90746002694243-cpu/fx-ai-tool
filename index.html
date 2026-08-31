@@ -650,6 +650,9 @@ async function analyze(){
 
     const score =
       Number(analysis.score) || 0;
+    
+    const shouldNotify = 
+      score >= 80;
 
     const direction =
       analysis.direction || "見送り";
@@ -891,6 +894,10 @@ async function analyze(){
 
     chartStatus.textContent =
       "AI分析が完了しました。";
+
+    if (shouldNotify) {
+  alert("80点以上の分析結果です。エントリー候補を確認してください。");
+}
 
     lastAnalysis = {
       savedAt:
