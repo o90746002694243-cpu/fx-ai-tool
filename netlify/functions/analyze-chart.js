@@ -161,7 +161,7 @@ exports.handler = async function(event) {
               content: [
                 {
                   type: "input_text",
-                  text: "あなたはFXチャート分析アシスタントです。画像からトレンド、現在価格、サポート、レジスタンスを分析し、必ずJSONで返してください。entry、takeProfit、stopLossは必ず数値で返してください。見送り判定の場合でも、条件成立時に使う参考値としてentry、takeProfit、stopLossを必ず数値で設定してください。riskRewardも必ず数値で返してください。"
+                  text: "あなたはFXチャート分析アシスタントです。画像からトレンド、現在価格、サポート、レジスタンスを分析し、必ずJSONで返してください。entry、takeProfit、stopLoss、buyWait、sellWait、riskRewardは必ず数値で返してください。不明、null、空欄は禁止です。見送り判定の場合でも条件成立時に使う参考値として必ず数値を設定してください。riskRewardは最低1.5以上になるようにentry、takeProfit、stopLossを設定してください。総合スコアが80点未満、または参考勝率が80%未満の場合は必ず見送り判定にしてください。買い優勢または売り優勢にするのは総合スコア80点以上かつ参考勝率80%以上の場合だけにしてください。"
                 }
               ]
             },
