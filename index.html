@@ -1044,7 +1044,11 @@ function renderHistory(){
 }
 
 // ===== FX 自動監視 =====
-let lastMonitorKey = "";
+const MONITOR_COOLDOWN = 60 * 60 * 1000;
+let lastMonitorKey =
+  localStorage.getItem("fxLastMonitorKey") || "";
+let lastMonitorTime =
+  Number(localStorage.getItem("fxLastMonitorTime")) || 0;
 
 async function monitorMarket() {
   try {
@@ -1065,11 +1069,28 @@ async function monitorMarket() {
     if (data.shouldNotify) {
       const monitorKey =
         data.pair + "-" +
-        data.direction + "-" +
-        data.score;
+        data.direction;
 
-      if (monitorKey !== lastMonitorKey) {
+      const now = Date.now();
+      const cooldownPassed =
+        now - lastMonitorTime >= MONITOR_COOLDOWN;
+
+      if (
+        monitorKey !== lastMonitorKey ||
+        cooldownPassed
+      ) {
         lastMonitorKey = monitorKey;
+        lastMonitorTime = now;
+
+        localStorage.setItem(
+          "fxLastMonitorKey",
+          lastMonitorKey
+        );
+
+        localStorage.setItem(
+          "fxLastMonitorTime",
+          String(lastMonitorTime)
+        );
 
         alert(
          "FX自動監視\n\n" +
