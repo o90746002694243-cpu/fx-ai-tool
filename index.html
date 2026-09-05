@@ -1090,6 +1090,23 @@ async function monitorMarket() {
   }
 }
 
+// ===== 自動監視ステータス表示 =====
+const monitorStatus = document.createElement("div");
+
+monitorStatus.textContent = "🟢 FX自動監視中（15分ごと）";
+
+monitorStatus.style.position = "fixed";
+monitorStatus.style.bottom = "15px";
+monitorStatus.style.right = "15px";
+monitorStatus.style.padding = "10px 14px";
+monitorStatus.style.background = "#111827";
+monitorStatus.style.color = "#ffffff";
+monitorStatus.style.borderRadius = "10px";
+monitorStatus.style.fontSize = "13px";
+monitorStatus.style.zIndex = "9999";
+
+document.body.appendChild(monitorStatus);  
+  
 // ページを開いた時に1回チェック
 monitorMarket();
 
