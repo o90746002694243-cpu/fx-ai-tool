@@ -1043,7 +1043,56 @@ function renderHistory(){
       .join("");
 }
 
-renderHistory();
+// ===== FX 自動監視 =====
+let lastMonitorKey = "";
+
+async function monitorMarket() {
+  try {
+    const response = await fetch(
+      "/.netlify/functions/monitor-market",
+      { cache: "no-store" }
+    );
+
+    const data = await response.json();
+
+    console.log("FX自動監視:", data);
+
+    if (!response.ok || !data.ok) {
+      console.warn("FX自動監視エラー:", data);
+      return;
+    }
+
+    if (data.shouldNotify) {
+      const monitorKey =
+        data.pair + "-" +
+        data.direction + "-" +
+        data.score;
+
+      if (monitorKey !== lastMonitorKey) {
+        lastMonitorKey = monitorKey;
+
+        alert(
+          "FX自動監視\n\n" +
+          data.pair + "\n" +
+          data.direction + "\n" +
+          "スコア：" + data.score + "点\n" +
+          "現在価格：" + data.currentPrice
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error("FX自動監視に失敗:", error);
+  }
+}
+
+// ページを開いた時に1回チェック
+monitorMarket();
+
+// 15分ごとに自動チェック
+setInterval(monitorMarket, 15 * 60 * 1000);
+  
+  renderHistory();
 </script>
 </body>
 </html>  
