@@ -1072,12 +1072,16 @@ async function monitorMarket() {
         lastMonitorKey = monitorKey;
 
         alert(
-          "FX自動監視\n\n" +
-          data.pair + "\n" +
-          data.direction + "\n" +
-          "スコア：" + data.score + "点\n" +
-          "現在価格：" + data.currentPrice
-        );
+         "FX自動監視\n\n" +
+         "通貨ペア：" + data.pair + "\n" +
+         "方向：" + data.direction + "\n" +
+         "スコア：" + data.score + "点\n" +
+         "現在価格：" + data.currentPrice + "\n" +
+         "エントリー：" + data.entryPrice + "\n" +
+         "利確：" + data.takeProfit + "\n" +
+         "損切り：" + data.stopLoss + "\n" +
+         "RR：" + data.riskReward
+       );
       }
     }
 
