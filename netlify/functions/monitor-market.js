@@ -170,13 +170,59 @@ exports.handler = async function () {
       score >= targetScore &&
       direction !== "見送り";
 
+// ===== エントリー・利確・損切り自動計算 =====
+const entryPrice = currentPrice;
+
+const recentRanges = candles
+  .slice(-14)
+  .map(c => c.high - c.low);
+
+const averageRange =
+  recentRanges.reduce((sum, value) => sum + value, 0) /
+  recentRanges.length;
+
+let takeProfit = currentPrice;
+let stopLoss = currentPrice;
+
+if (direction === "買い") {
+  stopLoss = Math.min(
+    currentPrice - averageRange,
+    support - averageRange * 0.2
+  );
+
+  takeProfit =
+    currentPrice +
+    (currentPrice - stopLoss) * 1.5;
+}
+
+if (direction === "売り") {
+  stopLoss = Math.max(
+    currentPrice + averageRange,
+    resistance + averageRange * 0.2
+  );
+
+  takeProfit =
+    currentPrice -
+    (stopLoss - currentPrice) * 1.5;
+}
+
+const riskReward =
+  direction === "見送り"
+    ? 0
+    : Math.abs(takeProfit - entryPrice) /
+      Math.abs(entryPrice - stopLoss);
+    
     console.log("FX monitor result:", {
       pair,
       interval,
       currentPrice,
       direction,
       score,
-      shouldNotify
+      shouldNotify,
+      entryPrice,
+      takeProfit,
+      stopLoss,
+      riskReward
     });
 
     return {
@@ -202,8 +248,20 @@ exports.handler = async function () {
 
         shouldNotify,
 
+        entryPrice:
+          Number(entryPrice.toFixed(3)),
+
+        takeProfit:
+          Number(takeProfit.toFixed(3)),
+
+        stopLoss:
+          Number(stopLoss.toFixed(3)),
+
+        riskReward:
+          Number(riskReward.toFixed(2)),  
+
         indicators: {
-          sma5:
+           sma5:
             Number(sma5.toFixed(3)),
 
           sma20:
