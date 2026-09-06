@@ -211,6 +211,50 @@ const riskReward =
     ? 0
     : Math.abs(takeProfit - entryPrice) /
       Math.abs(entryPrice - stopLoss);
+
+    if (shouldNotify) {
+      try {
+        const notificationResponse = await fetch(
+          "https://api.onesignal.com/notifications",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": Key ${process.env.ONESIGNAL_API_KEY}
+            body: JSON.stringify({
+              app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
+              target_channel: "push",
+              included_segments: ["Subscribed Users"],
+              headings: {
+                en: "FX AI Tool 🚨"
+              },
+              contents: {
+                en:
+                  ${pair} ${direction}候補\n +
+                  スコア: ${score}%\n +
+                  エントリー: ${entryPrice.toFixed(3)}\n +
+                  利確: ${takeProfit.toFixed(3)}\n +
+                  損切り: ${stopLoss.toFixed(3)}
+              },
+              web_url: "https://lively-salmiakki-ff3953.netlify.app/"
+            })
+          }
+        );
+
+        const notificationResult =
+          await notificationResponse.json();
+
+        console.log(
+          "OneSignal notification result:",
+          notificationResult
+        );
+      } catch (notificationError) {
+        console.error(
+          "OneSignal notification error:",
+          notificationError
+        );
+      }
+    }
     
     console.log("FX monitor result:", {
       pair,
