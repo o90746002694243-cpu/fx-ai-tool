@@ -22,12 +22,7 @@ exports.handler = async function () {
     }
 
     const url =
-      "https://api.twelvedata.com/time_series" +
-      ?symbol=${pair} +
-      &interval=${interval} +
-      "&outputsize=50" +
-      `&apikey=${apiKey}`;
-
+  `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(pair)}&interval=${interval}&outputsize=50&apikey=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
 
