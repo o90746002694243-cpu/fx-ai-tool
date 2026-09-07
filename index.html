@@ -1147,5 +1147,29 @@ setInterval(monitorMarket, 15 * 60 * 1000);
   
   renderHistory();
 </script>
+<button id="enableNotifications"
+  style="
+    position:fixed;
+    right:15px;
+    bottom:65px;
+    z-index:9999;
+    padding:12px 16px;
+    border:none;
+    border-radius:10px;
+    font-weight:bold;
+    cursor:pointer;
+  ">
+  🔔 通知を有効にする
+</button>
+
+<script>
+document.getElementById("enableNotifications").addEventListener("click", function () {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.Notifications.requestPermission();
+  });
+});
+</script>  
 </body>
 </html>  
