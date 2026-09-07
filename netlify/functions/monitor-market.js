@@ -224,7 +224,7 @@ const riskReward =
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": Key ${process.env.ONESIGNAL_API_KEY}
+              "Authorization": "Key " + process.env.ONESIGNAL_API_KEY,
             body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
               target_channel: "push",
