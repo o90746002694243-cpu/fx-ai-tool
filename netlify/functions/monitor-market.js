@@ -1,8 +1,17 @@
 exports.handler = async function () {
   try {
-    const pair = "AUD/JPY";
+    const pairs = [
+      "AUD/JPY",
+      "NZD/JPY",
+      "CAD/JPY",
+      "USD/JPY",
+      "EUR/JPY"
+    ];
     const interval = "15min";
     const targetScore = 80;
+    const results = [];
+
+    for (const pair of pairs) {
 
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
@@ -269,7 +278,7 @@ const riskReward =
       riskReward
     });
 
-    return {
+    results.push({
       statusCode: 200,
       headers: {
         "Content-Type": "application/json"
@@ -321,7 +330,20 @@ const riskReward =
             Number(resistance.toFixed(3))
         }
       })
-    };
+    });
+
+}
+
+return {
+  statusCode: 200,
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    ok: true,
+    results
+  })
+};
 
   } catch (error) {
     console.error(
