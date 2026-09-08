@@ -21,7 +21,7 @@ exports.handler = async function(event) {
       pair = "不明",
       price = "不明",
       timeframe = "不明",
-      risk = "medium"r,
+      risk = "medium",
       guidelines = [],
     } = body;
 
