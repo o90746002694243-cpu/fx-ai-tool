@@ -254,6 +254,57 @@ button:disabled{
     >
 
     <div id="chartStatus" class="small">画像が選択されていません。</div>
+    <div id="guidelineBox" style="margin:14px 0;padding:12px;border:1px solid #334155;border-radius:12px;background:#0f172a;">
+  <div style="font-weight:bold;margin-bottom:10px;">
+    ⭐ 指針表
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="3" value="上位足と方向一致">
+      ⭐⭐⭐ 上位足と方向一致
+    </label>
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="3" value="強いトレンド発生">
+      ⭐⭐⭐ 強いトレンド発生
+    </label>
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="2" value="押し目・戻り目">
+      ⭐⭐ 押し目・戻り目
+    </label>
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="2" value="サポート・レジスタンス反応">
+      ⭐⭐ サポート・レジスタンス反応
+    </label>
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="2" value="ローソク足の勢い">
+      ⭐⭐ ローソク足の勢い
+    </label>
+  </div>
+
+  <div class="guideline-item">
+    <label>
+      <input type="checkbox" class="guidelineCheck" data-stars="1" value="弱い補助シグナル">
+      ⭐ 弱い補助シグナル
+    </label>
+  </div>
+
+  <div class="small" style="margin-top:8px;">
+    ※ ⭐⭐以上のチェック項目をAI予想に反映します
+  </div>
+</div>
     <button type="button" id="analyzeButton" onclick="analyze()">
       AI分析する
     </button>
@@ -626,6 +677,16 @@ async function analyze(){
   try{
     const image = await compressImage(file);
 
+    const selectedGuidelines =
+  Array.from(
+    document.querySelectorAll(".guidelineCheck:checked")
+  )
+  .filter(item => Number(item.dataset.stars) >= 2)
+  .map(item => ({
+    stars: Number(item.dataset.stars),
+    text: item.value
+  }));
+
     const response =
       await fetch(
         "/.netlify/functions/analyze-chart",
@@ -642,7 +703,8 @@ async function analyze(){
                 ? price.toFixed(3)
                 : "不明",
             timeframe:timeframe,
-            risk:risk
+            risk:risk,
+            guidelines:selectedGuidelines
           })
         }
       );
