@@ -21,7 +21,8 @@ exports.handler = async function(event) {
       pair = "不明",
       price = "不明",
       timeframe = "不明",
-      risk = "medium"
+      risk = "medium"r,
+      guidelines = [],
     } = body;
 
     if (!image) {
@@ -38,8 +39,24 @@ exports.handler = async function(event) {
       });
     }
 
+    const guidelineText =
+  Array.isArray(guidelines) && guidelines.length > 0
+    ? guidelines
+        .map(g => `${"⭐".repeat(Number(g.stars) || 0)} ${g.text}`)
+        .join("\n")
+    : "該当する指針なし";
+
     const prompt = `
 あなたはFXチャート分析アシスタントです。
+【指針表】
+${guidelineText}
+
+指針の扱い：
+- ⭐⭐⭐ は強く重視してください。
+- ⭐⭐ は補助材料として重視してください。
+- 指針がチャートの方向性と一致する場合は、判断の信頼度を上げる材料にしてください。
+- 指針とチャートが矛盾する場合は、無理に指針を優先せず、チャートを優先してください。
+- 指針だけを理由に勝率を不自然に高くしないでください。
 添付されたチャート画像を最優先で読み取り、短期トレード向けに分析してください。
 
 重要:
