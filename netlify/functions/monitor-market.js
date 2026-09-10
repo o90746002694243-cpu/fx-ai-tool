@@ -214,6 +214,7 @@ const riskReward =
 
     if (shouldNotify) {
       try {
+        console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
           "https://api.onesignal.com/notifications",
           {
