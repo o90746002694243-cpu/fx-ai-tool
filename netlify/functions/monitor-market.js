@@ -1,17 +1,13 @@
 exports.handler = async function () {
   try {
     const pairs = [
-      "AUD/JPY",
-      "NZD/JPY",
-      "CAD/JPY",
       "USD/JPY",
-      "EUR/JPY"
     ];
     const interval = "15min";
     const targetScore = 80;
     const results = [];
 
-    for (const pair of pairs) {
+    for (const pair of pairs) {  
 
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
