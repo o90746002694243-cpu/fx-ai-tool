@@ -212,6 +212,8 @@ const riskReward =
     : Math.abs(takeProfit - entryPrice) /
       Math.abs(entryPrice - stopLoss);
 
+        console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
+      
     if (shouldNotify) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
@@ -221,7 +223,7 @@ const riskReward =
             method: "POST",
            headers: {
              "Content-Type": "application/json",
-            "Authorization": "Key " + process.env.ONESIGNAL_API_KEY,
+             "Authorization": "Key " + process.env.ONESIGNAL_API_KEY,
            },
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
