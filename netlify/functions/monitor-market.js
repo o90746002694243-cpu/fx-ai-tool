@@ -213,6 +213,7 @@ const riskReward =
       Math.abs(entryPrice - stopLoss);
 
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
+        console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
       
     if (shouldNotify) {
       try {
