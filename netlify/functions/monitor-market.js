@@ -4,7 +4,7 @@ exports.handler = async function () {
       "USD/JPY",
     ];
     const interval = "15min";
-    const targetScore = 80;
+    const targetScore = 50;
     const results = [];
 
     for (const pair of pairs) {  
