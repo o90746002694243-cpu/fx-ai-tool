@@ -1230,7 +1230,19 @@ document.getElementById("enableNotifications").addEventListener("click", functio
   window.OneSignalDeferred = window.OneSignalDeferred || [];
 
   OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.Notifications.requestPermission();
+    try {
+      await OneSignal.Notifications.requestPermission();
+
+      if (OneSignal.Notifications.permission) {
+        alert("通知は有効になっています");
+        document.getElementById("enableNotifications").textContent = "🔔 通知ON";
+      } else {
+        alert("通知が許可されていません");
+      }
+    } catch (error) {
+      alert("通知設定エラー: " + error.message);
+      console.error(error);
+    }
   });
 });
 </script>  
