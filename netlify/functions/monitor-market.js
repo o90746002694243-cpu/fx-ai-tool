@@ -229,7 +229,7 @@ const riskReward =
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
               target_channel: "push",
-              included_segments: ["Subscribed Users"],
+              include_subscription_ids: ["92a734ef-c592-4c77-b214-942cf28ce03a"],
               headings: {
                 en: "FX AI Tool 🚨"
               },
