@@ -184,26 +184,20 @@ const averageRange =
 let takeProfit = currentPrice;
 let stopLoss = currentPrice;
 
-if (direction === "買い") {
-  stopLoss = Math.min(
-    currentPrice - averageRange,
-    support - averageRange * 0.2
-  );
+f (direction === "買い") {
+  stopLoss = currentPrice - averageRange;
 
   takeProfit =
     currentPrice +
-    (currentPrice - stopLoss) * 1.5;
+    averageRange * 1.5;
 }
 
 if (direction === "売り") {
-  stopLoss = Math.max(
-    currentPrice + averageRange,
-    resistance + averageRange * 0.2
-  );
+  stopLoss = currentPrice + averageRange;
 
   takeProfit =
     currentPrice -
-    (stopLoss - currentPrice) * 1.5;
+    averageRange * 1.5;
 }
 
 const riskReward =
