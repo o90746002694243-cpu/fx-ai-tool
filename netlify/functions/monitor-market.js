@@ -214,6 +214,14 @@ const riskReward =
 
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
+
+        const oneSignalKey = (process.env.ONESIGNAL_API_KEY || "").trim();
+
+console.log("OneSignal key info:", {
+  exists: !!oneSignalKey,
+  length: oneSignalKey.length,
+  startsCorrectly: oneSignalKey.startsWith("os_v2_app_")
+});
       
     if (shouldNotify) {
       try {
@@ -224,7 +232,7 @@ const riskReward =
             method: "POST",
            headers: {
              "Content-Type": "application/json",
-             "Authorization": "Key " + process.env.ONESIGNAL_API_KEY,
+             "Authorization": "Key " + oneSignalKey,
            },
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
