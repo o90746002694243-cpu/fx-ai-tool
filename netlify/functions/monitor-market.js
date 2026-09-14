@@ -1,7 +1,6 @@
 exports.handler = async function () {
   try {
-    const { getStore } = await import("@netlify/blobs");
-const notificationStore = getStore("fx-notifications");
+   
     const pairs = [
       
   "USD/JPY",
@@ -228,6 +227,7 @@ const riskReward =
   direction === "見送り"
     ? 0
     : Math.abs(takeProfit - entryPrice) /
+
       Math.abs(entryPrice - stopLoss);
 
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
@@ -244,10 +244,7 @@ console.log("OneSignal key info:", {
      const notificationKey =
   pair.replace("/", "-") + "-" + direction;
 
-const lastNotification =
-  await notificationStore.get(notificationKey, {
-    type: "json"
-  });
+const lastNotification = null;
 
 const oneHour = 60 * 60 * 1000;
 
@@ -293,11 +290,6 @@ const isDuplicate =
 
         const notificationResult =
           await notificationResponse.json();
-        if (notificationResponse.ok) {
-  await notificationStore.setJSON(notificationKey, {
-    time: Date.now()
-  });
-}
 
         console.log(
           "OneSignal notification result:",
