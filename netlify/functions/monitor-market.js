@@ -251,13 +251,14 @@ console.log("OneSignal key info:", {
                 en: "FX AI Tool 🚨"
               },
               contents: {
-                en:
-                  pair + " " + direction + "候補\n" +
-                  "スコア: " + score + "%\n" +
-                  "エントリー: " + entryPrice.toFixed(3) + "\n" +
-                  "利確: " + takeProfit.toFixed(3) + "\n" +
-                  "損切り: " + stopLoss.toFixed(3)
-              },
+  en:
+    pair + " " + direction + "候補\n" +
+    "スコア：" + score + "%\n" +
+    "エントリー：" + entryPrice.toFixed(3) + "\n" +
+    "利確：" + takeProfit.toFixed(3) + "\n" +
+    "損切り：" + stopLoss.toFixed(3) + "\n" +
+    "RR：1:" + riskReward.toFixed(2)
+},
               web_url: "https://lively-salmiakki-ff3953.netlify.app/"
             })
           }
