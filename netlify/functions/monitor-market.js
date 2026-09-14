@@ -188,23 +188,26 @@ const averageRange =
       recentRanges.length
     : 0.1;
 
+  const maxRange = currentPrice * 0.003;
+const safeRange = Math.min(averageRange, maxRange);
+      
 let takeProfit = currentPrice;
 let stopLoss = currentPrice;
 
-f (direction === "買い") {
-  stopLoss = currentPrice - averageRange;
+if (direction === "買い") {
+  stopLoss = currentPrice - safeRange;
 
   takeProfit =
     currentPrice +
-    averageRange * 1.5;
+    safeRange * 1.5;
 }
 
 if (direction === "売り") {
-  stopLoss = currentPrice + averageRange;
+  stopLoss = currentPrice + safeRange;
 
   takeProfit =
     currentPrice -
-    averageRange * 1.5;
+    safeRange * 1.5;
 }
 
 const riskReward =
