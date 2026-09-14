@@ -179,11 +179,14 @@ const entryPrice = currentPrice;
 
 const recentRanges = candles
   .slice(-14)
-  .map(c => c.high - c.low);
+  .map(c => Number(c.high) - Number(c.low))
+  .filter(v => Number.isFinite(v) && v > 0);
 
 const averageRange =
-  recentRanges.reduce((sum, value) => sum + value, 0) /
-  recentRanges.length;
+  recentRanges.length > 0
+    ? recentRanges.reduce((sum, value) => sum + value, 0) /
+      recentRanges.length
+    : 0.1;
 
 let takeProfit = currentPrice;
 let stopLoss = currentPrice;
