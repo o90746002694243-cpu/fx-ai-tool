@@ -1,8 +1,12 @@
 exports.handler = async function () {
   try {
     const pairs = [
-      "USD/JPY",
-    ];
+  "USD/JPY",
+  "AUD/JPY",
+  "NZD/JPY",
+  "CAD/JPY",
+  "EUR/JPY",
+];
     const interval = "15min";
     const targetScore = 80;
     const results = [];
