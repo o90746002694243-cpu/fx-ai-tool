@@ -1,6 +1,7 @@
 exports.handler = async function () {
   try {
     const pairs = [
+      
   "USD/JPY",
   "AUD/JPY",
   "NZD/JPY",
@@ -167,8 +168,19 @@ exports.handler = async function () {
         ? "売り"
         : "見送り";
 
-    const score =
-      Math.max(buyScore, sellScore);
+    const rawScore = Math.max(buyScore, sellScore);
+const oppositeScore = Math.min(buyScore, sellScore);
+
+const score = Math.min(
+  95,
+  Math.max(
+    0,
+    Math.round(
+      rawScore * 0.8 -
+      oppositeScore * 0.3
+    )
+  )
+);
 
     const shouldNotify =
       score >= targetScore &&
