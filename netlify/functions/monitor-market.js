@@ -1,7 +1,5 @@
 exports.handler = async function () {
   try {
-  const { getStore } = await import("@netlify/blobs");
-  const store = getStore("fx-notifications");
    
     const pairs = [
       
@@ -246,7 +244,7 @@ console.log("OneSignal key info:", {
      const notificationKey =
   pair.replace("/", "-") + "-" + direction;
 
-const lastNotification = await store.get(notificationKey, { type: "json" });
+const lastNotification = null;
 
 const oneHour = 60 * 60 * 1000;
 
@@ -292,12 +290,6 @@ const isDuplicate =
 
         const notificationResult =
           await notificationResponse.json();
-
-        await store.setJSON(notificationKey, {
-          time: Date.now(),
-          score: score,
-          direction: direction
-        });
         
         console.log(
           "OneSignal notification result:",
