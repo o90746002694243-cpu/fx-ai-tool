@@ -1,7 +1,7 @@
-const { getStore } = require("@netlify/blobs");
 exports.handler = async function () {
   try {
-    const store = getStore("fx-notifications");
+  const { getStore } = await import("@netlify/blobs");
+  const store = getStore("fx-notifications");
    
     const pairs = [
       
