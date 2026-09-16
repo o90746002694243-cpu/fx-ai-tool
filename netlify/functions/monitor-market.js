@@ -313,7 +313,7 @@ const isDuplicate =
               contents: {
   en:
     pair + " " + direction + "候補\n" +
-    "スコア：" + score + "%\n" +
+    "スコア：" + score + "点\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
