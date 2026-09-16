@@ -177,7 +177,7 @@ const score = Math.min(
   Math.max(
     0,
     Math.round(
-      rawScore * 0.8 -
+      rawScore * 1.0 -
       oppositeScore * 0.3
     )
   )
