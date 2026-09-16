@@ -187,6 +187,37 @@ const score = Math.min(
   (direction === "買い" && rsi >= 65) ||
   (direction === "売り" && rsi <= 35);
 
+const previousBodies = candles
+  .slice(-6, -1)
+  .map(c =>
+    Math.abs(
+      Number(c.close) - Number(c.open)
+    )
+  )
+  .filter(v => Number.isFinite(v));
+
+const averageBody =
+  previousBodies.length > 0
+    ? previousBodies.reduce(
+        (sum, value) => sum + value,
+        0
+      ) / previousBodies.length
+    : 0;
+
+const latestBody = Math.abs(
+  Number(latest.close) - Number(latest.open)
+);
+
+const isSharpMove =
+  averageBody > 0 &&
+  latestBody >= averageBody * 1.8;
+
+const shouldNotify =
+  score >= targetScore &&
+  direction !== "見送り" &&
+  !isRsiExtreme &&
+  !isSharpMove;
+
 const shouldNotify =
   score >= targetScore &&
   direction !== "見送り" &&
