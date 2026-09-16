@@ -183,9 +183,14 @@ const score = Math.min(
   )
 );
 
-    const shouldNotify =
-      score >= targetScore &&
-      direction !== "見送り";
+    const isRsiExtreme =
+  (direction === "買い" && rsi >= 65) ||
+  (direction === "売り" && rsi <= 35);
+
+const shouldNotify =
+  score >= targetScore &&
+  direction !== "見送り" &&
+  !isRsiExtreme;
 
 // ===== エントリー・利確・損切り自動計算 =====
 const entryPrice = currentPrice;
