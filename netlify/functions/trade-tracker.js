@@ -101,23 +101,7 @@ function getNewerCandles(candles, signal) {
 
   return newerCandles;
 }
-
-  const signalIndex = signal.candleTime
-    ? candles.findIndex(
-        candle =>
-          String(candle.datetime || "") ===
-          String(signal.candleTime)
-      )
-    : -1;
-
-  const newerCandles =
-    signalIndex >= 0
-      ? candles.slice(0, signalIndex)
-      : candles.slice(0, 8);
-
-  return newerCandles.reverse();
-}
-
+   
 function settlePairSignals(
   tracker,
   pair,
