@@ -1,5 +1,19 @@
+const {
+  loadTracker,
+  settlePairSignals,
+  hasOpenSignal,
+  addSignal,
+  formatActualWinRate,
+  saveTracker
+} = require("./trade-tracker");
+
 exports.handler = async function () {
   try {
+
+const {
+  store: tradeStore,
+  tracker
+} = await loadTracker();    
    
     const pairs = [
       
@@ -104,6 +118,12 @@ exports.handler = async function () {
 
     const latest =
       candles[candles.length - 1];
+
+    settlePairSignals(
+  tracker,
+  pair,
+  candles
+);  
 
     const previous20 =
       candles.slice(-21, -1);
@@ -212,16 +232,15 @@ const isSharpMove =
   averageBody > 0 &&
   latestBody >= averageBody * 1.8;
 
-const shouldNotify =
-  score >= targetScore &&
-  direction !== "見送り" &&
-  !isRsiExtreme &&
-  !isSharpMove;
+const alreadyTracking =
+  hasOpenSignal(tracker, pair);
 
 const shouldNotify =
   score >= targetScore &&
   direction !== "見送り" &&
-  !isRsiExtreme;
+  !isRsiExtreme &&
+  !isSharpMove &&
+  !alreadyTracking;
 
 // ===== エントリー・利確・損切り自動計算 =====
 const entryPrice = currentPrice;
@@ -287,6 +306,10 @@ const oneHour = 60 * 60 * 1000;
 const isDuplicate =
   lastNotification &&
   Date.now() - lastNotification.time < oneHour; 
+
+const actualWinRateText =
+  formatActualWinRate(tracker, pair);
+      
     if (shouldNotify && !isDuplicate) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
@@ -314,6 +337,7 @@ const isDuplicate =
   en:
     pair + " " + direction + "候補\n" +
     "スコア：" + score + "点\n" +
+    "実績勝率：" + actualWinRateText + "\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
@@ -331,6 +355,19 @@ const isDuplicate =
           "OneSignal notification result:",
           notificationResult
         );
+
+if (notificationResponse.ok) {
+  addSignal(tracker, {
+    pair,
+    direction,
+    entryPrice,
+    takeProfit,
+    stopLoss,
+    score,
+    candleTime: latest.datetime
+  });
+}
+        
       } catch (notificationError) {
         console.error(
           "OneSignal notification error:",
@@ -408,6 +445,11 @@ const isDuplicate =
 
 }
 
+await saveTracker(
+  tradeStore,
+  tracker
+);
+    
 return {
   statusCode: 200,
   headers: {
