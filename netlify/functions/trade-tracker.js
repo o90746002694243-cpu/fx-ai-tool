@@ -96,6 +96,22 @@ function getNewerCandles(candles, signal) {
 
   const newerCandles =
     signalIndex >= 0
+      ? candles.slice(signalIndex + 1)
+      : candles.slice(-8);
+
+  return newerCandles;
+}
+
+  const signalIndex = signal.candleTime
+    ? candles.findIndex(
+        candle =>
+          String(candle.datetime || "") ===
+          String(signal.candleTime)
+      )
+    : -1;
+
+  const newerCandles =
+    signalIndex >= 0
       ? candles.slice(0, signalIndex)
       : candles.slice(0, 8);
 
