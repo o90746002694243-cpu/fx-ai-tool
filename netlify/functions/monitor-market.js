@@ -23,11 +23,21 @@ const {
   "CAD/JPY",
   "EUR/JPY",
 ];
+    
+    const slot =
+  Math.floor(Date.now() / (15 * 60 * 1000)) %
+  pairs.length;
+
+const pairsToCheck = [
+  pairs[slot],
+  pairs[(slot + 1) % pairs.length]
+];
+
     const interval = "15min";
     const targetScore = 90;
     const results = [];
 
-    for (const pair of pairs) {  
+    for (const pair of pairsToCheck) {
 
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
