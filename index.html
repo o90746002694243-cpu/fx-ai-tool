@@ -189,6 +189,7 @@ button:disabled{
   <div class="card">
     <h1>📈 FX AI Tool</h1>
 
+    <div id="manual-analysis" style="display: none;">
     <div class="description">
       チャート画像を1枚選ぶだけで、AIが通貨ペア・現在価格・時間足・エントリー候補を分析します。<br>
       通貨ペア・現在価格・時間足は空欄でもOKです。画像から自動判定を優先します。
@@ -316,6 +317,7 @@ button:disabled{
     <button type="button" class="danger" onclick="clearHistory()">
       保存履歴を削除
     </button>
+     </div> 
 
     <div id="result" class="result">
       <div id="signal" class="signal"></div>
