@@ -7,13 +7,13 @@ const {
   saveTracker
 } = require("./trade-tracker");
 
-exports.handler = async function () {
+exports.handler = async function (event) {
   try {
 
 const {
   store: tradeStore,
   tracker
-} = await loadTracker();    
+} = await loadTracker(event); 
    
     const pairs = [
       
