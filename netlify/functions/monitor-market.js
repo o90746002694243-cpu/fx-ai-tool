@@ -309,13 +309,7 @@ console.log("OneSignal key info:", {
      const notificationKey =
   pair.replace("/", "-") + "-" + direction;
 
-const lastNotification = null;
-
-const oneHour = 60 * 60 * 1000;
-
-const isDuplicate =
-  lastNotification &&
-  Date.now() - lastNotification.time < oneHour; 
+const isDuplicate = hasOpenSignal(tracker, pair);
 
 const actualWinRateText =
   formatActualWinRate(tracker, pair);
