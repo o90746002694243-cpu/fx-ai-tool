@@ -188,6 +188,10 @@ button:disabled{
 <div class="container">
   <div class="card">
     <h1>📈 FX AI Tool</h1>
+    <div id="notificationDetail" class="result" style="display: none;">
+  <h2>📩 通知内容</h2>
+  <pre id="notificationDetailText" style="white-space: pre-wrap; font-family: inherit;"></pre>
+</div>
 
     <div id="manual-analysis" style="display: none;">
     <div class="description">
@@ -1247,6 +1251,27 @@ document.getElementById("enableNotifications").addEventListener("click", functio
     }
   });
 });
+
+ const notificationParams = new URLSearchParams(window.location.search);
+const notificationPair = notificationParams.get("pair");
+
+if (notificationPair) {
+  const detailBox = document.getElementById("notificationDetail");
+  const detailText = document.getElementById("notificationDetailText");
+
+  detailText.textContent =
+    notificationPair + " " +
+    (notificationParams.get("direction") || "") + "候補\n" +
+    "判定スコア：" + (notificationParams.get("score") || "-") + "点\n" +
+    "実績勝率：" + (notificationParams.get("winRate") || "-") + "\n" +
+    "エントリー：" + (notificationParams.get("entry") || "-") + "\n" +
+    "利確：" + (notificationParams.get("takeProfit") || "-") + "\n" +
+    "損切り：" + (notificationParams.get("stopLoss") || "-") + "\n" +
+    "RR 1:" + (notificationParams.get("rr") || "-");
+
+  detailBox.style.display = "block";
+} 
+  
 </script>  
 </body>
 </html>  
