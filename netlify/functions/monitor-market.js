@@ -202,13 +202,12 @@ const pairsToCheck = [
     const rawScore = Math.max(buyScore, sellScore);
 const oppositeScore = Math.min(buyScore, sellScore);
 
-const score = Math.min(
-  95,
-  Math.max(
-    0,
+const score = Math.max(
+  0,
+  Math.min(
+    95,
     Math.round(
-      rawScore * 1.0 -
-      oppositeScore * 0.3
+      50 + (rawScore - oppositeScore) * 0.4
     )
   )
 );
