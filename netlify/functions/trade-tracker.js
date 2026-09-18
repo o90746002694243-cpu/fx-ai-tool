@@ -173,10 +173,32 @@ function settlePairSignals(
     const age =
       now - Number(signal.createdAt || now);
 
-    if (age >= EXPIRY_MS) {
-      stats.expired += 1;
-      continue;
+   if (age >= EXPIRY_MS) {
+  const lastCandle = candles[candles.length - 1];
+  const finalPrice = Number(lastCandle && lastCandle.close);
+  const entryPrice = Number(signal.entryPrice);
+
+  if (
+    Number.isFinite(finalPrice) &&
+    Number.isFinite(entryPrice) &&
+    finalPrice !== entryPrice
+  ) {
+    const isWin =
+      signal.direction === "買い"
+        ? finalPrice > entryPrice
+        : finalPrice < entryPrice;
+
+    if (isWin) {
+      stats.wins += 1;
+    } else {
+      stats.losses += 1;
     }
+  } else {
+    stats.expired += 1;
+  }
+
+  continue;
+}
 
     remainingSignals.push(signal);
   }
