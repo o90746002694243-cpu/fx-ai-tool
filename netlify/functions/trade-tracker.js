@@ -3,15 +3,12 @@ const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 
-let storePromise = null;
+async function getTradeStore(event) {
+  const { connectLambda, getStore } = await import("@netlify/blobs");
 
-async function getTradeStore() {
-  if (!storePromise) {
-    storePromise = import("@netlify/blobs")
-      .then(({ getStore }) => getStore(STORE_NAME));
-  }
+  connectLambda(event);
 
-  return storePromise;
+  return getStore(STORE_NAME);
 }
 
 function createEmptyTracker() {
@@ -39,9 +36,9 @@ function normalizeTracker(saved) {
   return tracker;
 }
 
-async function loadTracker() {
+async function loadTracker(event) {
   try {
-    const store = await getTradeStore();
+    const store = await getTradeStore(event);
 
     const saved = await store.get(
       TRACKER_KEY,
