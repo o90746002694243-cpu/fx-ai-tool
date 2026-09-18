@@ -346,7 +346,18 @@ const actualWinRateText =
     "損切り：" + stopLoss.toFixed(3) + "\n" +
     "RR：1:" + riskReward.toFixed(2)
 },
-              web_url: "https://lively-salmiakki-ff3953.netlify.app/"
+              web_url:
+  "https://lively-salmiakki-ff3953.netlify.app/?" +
+  new URLSearchParams({
+    pair,
+    direction,
+    score: String(score),
+    winRate: actualWinRateText,
+    entry: entryPrice.toFixed(3),
+    takeProfit: takeProfit.toFixed(3),
+    stopLoss: stopLoss.toFixed(3),
+    rr: riskReward.toFixed(2)
+  }).toString()
             })
           }
         );
