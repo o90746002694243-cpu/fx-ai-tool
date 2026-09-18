@@ -339,7 +339,7 @@ const actualWinRateText =
               contents: {
   en:
     pair + " " + direction + "候補\n" +
-    "スコア：" + score + "点\n" +
+    "判定スコア：" + score + "点\n" +
     "実績勝率：" + actualWinRateText + "\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
