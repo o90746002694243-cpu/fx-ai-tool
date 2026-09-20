@@ -4,11 +4,12 @@ const MIN_SAMPLE_SIZE = 30;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 
 async function getTradeStore(event) {
-  const { connectLambda, getStore } = await import("@netlify/blobs");
+  const { getStore } = await import("@netlify/blobs");
 
-  connectLambda(event);
-
-  return getStore(STORE_NAME);
+  return getStore(STORE_NAME, {
+    siteID: process.env.NETLIFY_BLOBS_SITE_ID,
+    token: process.env.NETLIFY_BLOBS_TOKEN
+  });
 }
 
 function createEmptyTracker() {
