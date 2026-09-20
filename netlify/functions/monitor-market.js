@@ -327,12 +327,8 @@ const actualWinRateText =
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
               target_channel: "push",
-              include_aliases: {
-                onesignal_id: [
-                  "705c604d-7940-4bda-a387-ee3610791d3c",
-                  "f0b4df77-ade3-4e59-8c2d-d5c6cdb1702e"
-                ]
-              },
+              included_segments: ["Subscribed Users"],
+             
               headings: {
                 en: "FX AI Tool 🚨"
               },
