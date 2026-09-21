@@ -13,6 +13,14 @@
     await OneSignal.init({
       appId: "1e68f659-0220-4409-a00d-fd9905b529db",
     });
+    OneSignal.Notifications.addEventListener("click", function(event) {
+  const notification = event.notification;
+  alert(
+    (notification.title || "FX通知") +
+    "\n\n" +
+    (notification.body || "詳細情報はありません")
+  );
+});
   });
 </script>  
   
