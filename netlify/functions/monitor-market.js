@@ -18,12 +18,17 @@ async function loadImportantEvents() {
 
   try {
     const response = await fetch(
-      https://finnhub.io/api/v1/calendar/economic?from=${today}&to=${today}&token=${apiKey}
-    );
+  "https://finnhub.io/api/v1/calendar/economic?from=" +
+    today +
+    "&to=" +
+    today +
+    "&token=" +
+    apiKey
+);
 
-    if (!response.ok) {
-      return [];
-    }
+ if (!response.ok) {
+  return [];
+}   
 
     const data = await response.json();
 
