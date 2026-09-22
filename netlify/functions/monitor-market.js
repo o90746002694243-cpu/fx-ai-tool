@@ -8,34 +8,43 @@ const {
 } = require("./trade-tracker");
 
 async function loadImportantEvents() {
-  const apiKey = process.env.FINNHUB_API_KEY;
-
-  if (!apiKey) {
-    return [];
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-
   try {
     const response = await fetch(
-  "https://finnhub.io/api/v1/calendar/economic?from=" +
-    today +
-    "&to=" +
-    today +
-    "&token=" +
-    apiKey
-);
-console.log("Finnhub status:", response.status);
-    
- if (!response.ok) {
-  return [];
-}   
+      "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+    );
+
+    console.log("Economic calendar status:", response.status);
+
+    if (!response.ok) {
+      return [];
+    }
 
     const data = await response.json();
 
-    return (data.economicCalendar || []).filter(
-      event => Number(event.impact) >= 2
-    );
+    const countryCodes = {
+      USD: "US",
+      JPY: "JP",
+      EUR: "EU",
+      AUD: "AU",
+      NZD: "NZ",
+      CAD: "CA"
+    };
+
+    return data
+      .filter(
+        event =>
+          event.impact === "Medium" ||
+          event.impact === "High"
+      )
+      .map(event => ({
+        time: new Date(event.date)
+          .toISOString()
+          .replace("T", " ")
+          .replace("Z", ""),
+        country: countryCodes[event.country] || event.country,
+        title: event.title,
+        impact: event.impact
+      }));
   } catch (error) {
     console.error("Economic calendar error:", error);
     return [];
