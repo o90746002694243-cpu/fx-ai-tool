@@ -7,6 +7,65 @@ const {
   saveTracker
 } = require("./trade-tracker");
 
+async function loadImportantEvents() {
+  const apiKey = process.env.FINNHUB_API_KEY;
+
+  if (!apiKey) {
+    return [];
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  try {
+    const response = await fetch(
+      https://finnhub.io/api/v1/calendar/economic?from=${today}&to=${today}&token=${apiKey}
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data.economicCalendar || []).filter(
+      event => Number(event.impact) >= 2
+    );
+  } catch (error) {
+    console.error("Economic calendar error:", error);
+    return [];
+  }
+}
+
+function findImportantEvent(events, pair) {
+  const countryCodes = {
+    USD: "US",
+    JPY: "JP",
+    EUR: "EU",
+    AUD: "AU",
+    NZD: "NZ",
+    CAD: "CA"
+  };
+
+  const relatedCountries = pair
+    .split("/")
+    .map(currency => countryCodes[currency])
+    .filter(Boolean);
+
+  const now = Date.now();
+
+  return events.find(event => {
+    const text = String(event.time || "").replace(" ", "T");
+    const eventTime = Date.parse(`${text}Z`);
+    const difference = eventTime - now;
+
+    return (
+      relatedCountries.includes(String(event.country).toUpperCase()) &&
+      difference >= -30 * 60 * 1000 &&
+      difference <= 60 * 60 * 1000
+    );
+  });
+}
+
 exports.handler = async function (event) {
   try {
 
@@ -14,6 +73,7 @@ const {
   store: tradeStore,
   tracker
 } = await loadTracker(event); 
+    const importantEvents = await loadImportantEvents();
    
     const pairs = [
       
@@ -244,12 +304,15 @@ const isSharpMove =
 const alreadyTracking =
   hasOpenSignal(tracker, pair);
 
+ const importantEvent = findImportantEvent(importantEvents, pair);
+      
 const shouldNotify =
   score >= targetScore &&
   direction !== "見送り" &&
   !isRsiExtreme &&
   !isSharpMove &&
-  !alreadyTracking;
+  !alreadyTracking &&
+  !importantEvent;     
 
 // ===== エントリー・利確・損切り自動計算 =====
 const entryPrice = currentPrice;
