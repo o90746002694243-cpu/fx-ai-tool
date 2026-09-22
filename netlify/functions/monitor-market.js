@@ -25,7 +25,8 @@ async function loadImportantEvents() {
     "&token=" +
     apiKey
 );
-
+console.log("Finnhub status:", response.status);
+    
  if (!response.ok) {
   return [];
 }   
