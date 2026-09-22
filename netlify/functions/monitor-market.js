@@ -314,6 +314,15 @@ const actualWinRateText =
   formatActualWinRate(tracker, pair);
       
     if (shouldNotify && !isDuplicate) {
+            addSignal(tracker, {
+        pair,
+        direction,
+        entryPrice,
+        takeProfit,
+        stopLoss,
+        score,
+        candleTime: latest.datetime
+      });
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
@@ -365,18 +374,6 @@ const actualWinRateText =
           "OneSignal notification result:",
           notificationResult
         );
-
-if (notificationResponse.ok) {
-  addSignal(tracker, {
-    pair,
-    direction,
-    entryPrice,
-    takeProfit,
-    stopLoss,
-    score,
-    candleTime: latest.datetime
-  });
-}
         
       } catch (notificationError) {
         console.error(
