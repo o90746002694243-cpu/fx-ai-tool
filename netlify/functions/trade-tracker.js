@@ -3,7 +3,8 @@ const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 async function getTradeStore(event) {
-  const { getStore } = await import("@netlify/blobs");
+  const { connectLambda, getStore } = await import("@netlify/blobs");
+connectLambda(event);
   return getStore(STORE_NAME);
 }
 
