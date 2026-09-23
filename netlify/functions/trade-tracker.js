@@ -40,8 +40,7 @@ async function loadTracker(event) {
     const saved = await store.get(
       TRACKER_KEY,
       {
-        type: "json",
-        consistency: "strong"
+        type: "json"
       }
     );
 
