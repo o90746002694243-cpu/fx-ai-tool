@@ -534,10 +534,13 @@ const actualWinRateText =
 
 }
 
-await saveTracker(
-  tradeStore,
-  tracker
-);
+const tradeSaved = await saveTracker(tradeStore, tracker);
+console.log("FX trade tracker status:", {
+  storeAvailable: Boolean(tradeStore),
+  saved: tradeSaved,
+  openSignals: tracker.openSignals.length,
+  stats: tracker.stats
+});
     
 return {
   statusCode: 200,
