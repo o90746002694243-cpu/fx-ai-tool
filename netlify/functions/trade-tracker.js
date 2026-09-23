@@ -2,14 +2,9 @@ const STORE_NAME = "fx-trade-results";
 const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
-
 async function getTradeStore(event) {
   const { getStore } = await import("@netlify/blobs");
-
-  return getStore(STORE_NAME, {
-    siteID: process.env.NETLIFY_BLOBS_SITE_ID,
-    token: process.env.NETLIFY_BLOBS_TOKEN
-  });
+  return getStore(STORE_NAME);
 }
 
 function createEmptyTracker() {
