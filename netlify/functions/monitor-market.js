@@ -147,6 +147,7 @@ const pairsToCheck = [
     // Twelve Dataは新しい足から返すので古い順に並べ直す
     const candles = values
       .map(v => ({
+        datetime: v.datetime,
         open: Number(v.open),
         high: Number(v.high),
         low: Number(v.low),
