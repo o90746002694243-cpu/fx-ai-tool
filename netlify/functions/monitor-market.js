@@ -401,6 +401,8 @@ const actualWinRateText =
         score,
         candleTime: latest.datetime
       });
+      const rateMatch = /(\d+(?:\.\d+)?)%/.exec(actualWinRateText);
+if (rateMatch && Number(rateMatch[1]) >= 80) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
@@ -460,7 +462,7 @@ const actualWinRateText =
         );
       }
     }
-    
+    }
     console.log("FX monitor result:", {
       pair,
       interval,
