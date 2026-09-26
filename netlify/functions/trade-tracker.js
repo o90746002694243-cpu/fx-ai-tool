@@ -88,10 +88,15 @@ function getNewerCandles(candles, signal) {
     : -1;
 
   const newerCandles =
-    signalIndex >= 0
-      ? candles.slice(signalIndex + 1)
-      : candles.slice(-8);
-
+  signalIndex >= 0
+    ? candles.slice(signalIndex + 1)
+    : signal.candleTime
+      ? candles.filter(
+          candle =>
+            String(candle.datetime || "") >
+            String(signal.candleTime)
+        )
+      : [];
   return newerCandles;
 }
    
