@@ -402,8 +402,8 @@ const actualWinRateText =
         score,
         candleTime: latest.datetime
       });
-      const rateMatch = /(\d+(?:\.\d+)?)%/.exec(actualWinRateText);
-if (rateMatch && Number(rateMatch[1]) >= 80) {
+      
+if (shouldNotify && !isDuplicate) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
@@ -426,7 +426,7 @@ if (rateMatch && Number(rateMatch[1]) >= 80) {
   en:
     pair + " " + direction + "候補\n" +
     "判定スコア：" + score + "点\n" +
-    "実績勝率：" + actualWinRateText + "\n" +
+    "実績勝率: " + actualWinRateText + "\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
