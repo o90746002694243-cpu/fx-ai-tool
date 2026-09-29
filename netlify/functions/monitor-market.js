@@ -417,7 +417,10 @@ if (shouldNotify && !isDuplicate) {
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
               target_channel: "push",
-              include_subscription_ids: ["f7a8344c-34f9-44f8-8bb5-03f97a2fd645"],
+              include_subscription_ids: [
+  "f7a8344c-34f9-44f8-8bb5-03f97a2fd645",
+  "92a734ef-c592-4c77-b214-942cf28ce03a"
+],
              
               headings: {
                 en: "FX AI Tool 🚨"
