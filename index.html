@@ -188,6 +188,15 @@ button:disabled{
 <div class="container">
   <div class="card">
     <h1>📈 FX AI Tool</h1>
+    <section aria-label="自動監視と検証結果">
+      <h2>自動監視・勝率検証</h2>
+      <p>15分足の候補を、確定した1時間足・4時間足の方向で確認します。</p>
+      <p>通知条件：スコア90点以上・上位足一致・指標回避など。スコアは勝率ではありません。</p>
+      <div id="marketSummary" aria-live="polite">監視状況を読み込み中…</div>
+      <p style="font-size:13px;line-height:1.6">過去検証は仮想約定の参考値です。スプレッド・滑り・過去の指標回避は未反映。
+      TPとSLの両方に到達した足・6時間で未決着の取引も分母に含めます。30件未満は検証中です。
+      新ルールの実績は別集計です。過去の実績記録は保持しています。</p>
+    </section>
     <div id="notificationDetail" class="result" style="display: none;">
   <h2>📩 通知内容</h2>
   <pre id="notificationDetailText" style="white-space: pre-wrap; font-family: inherit;"></pre>
@@ -731,10 +740,10 @@ async function analyze(){
     const score =
       Number(analysis.score) || 0;
 
-    const winRate = score;
+    // Image-only analysis cannot establish an observed win rate.
 
     const shouldNotify =
-      score >= 80 && winRate >= 80;
+      score >= 80;
 
     const direction =
       analysis.direction || "見送り";
@@ -795,14 +804,14 @@ async function analyze(){
     const signal =
       document.getElementById("signal");
 
-    if(score >= 80 && winRate >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "買い"){
+    if(score >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "買い"){
       signal.textContent =
         "▲ 買い優勢";
 
       signal.className =
         "signal buy";
 
-   　}else if(score >= 80 && winRate >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "売り"){
+   　}else if(score >= 80 && computeRiskReward(entry, takeProfit, stopLoss).value >= 1.5 && direction === "売り"){
       signal.textContent =
         "▼ 売り優勢";
 
@@ -833,7 +842,7 @@ async function analyze(){
     document
       .getElementById("winRate")
       .textContent =
-      score + "%";
+      "画像だけでは算出不可";
 
     document
       .getElementById("resultPair")
@@ -1123,78 +1132,37 @@ function renderHistory(){
       .join("");
 }
 
-// ===== FX 自動監視 =====
-const MONITOR_COOLDOWN = 60 * 60 * 1000;
-let lastMonitorKey =
-  localStorage.getItem("fxLastMonitorKey") || "";
-let lastMonitorTime =
-  Number(localStorage.getItem("fxLastMonitorTime")) || 0;
-
+// ===== Read-only scheduled monitoring summaries =====
 async function monitorMarket() {
+  const box = document.getElementById("marketSummary");
   try {
-    const response = await fetch(
-      "/.netlify/functions/monitor-market",
-      { cache: "no-store" }
-    );
-
+    const response = await fetch("/.netlify/functions/market-status", {cache:"no-store"});
     const data = await response.json();
-
-    console.log("FX自動監視:", data);
-
-    if (!response.ok || !data.ok) {
-      console.warn("FX自動監視エラー:", data);
-      return;
+    if (!response.ok || !data.ok) throw new Error(data.error || "取得失敗");
+    box.replaceChildren();
+    if (!data.results.length) { box.textContent = "初回の定期監視結果を待っています。"; return; }
+    for (const result of data.results) {
+      const row = document.createElement("div");
+      row.style.cssText = "padding:14px 0;border-bottom:1px solid #4e6787;white-space:pre-wrap;line-height:1.7";
+      const bt = result.backtest || {};
+      const higher = result.higherTimeframes || {};
+      const old = Date.now() - Date.parse(result.checkedAt) > 90 * 60 * 1000;
+      row.textContent = result.pair + "：" + result.direction + "候補／" + result.score + "点\n" +
+        "1時間足：" + (higher.h1 || "不足") + " ／4時間足：" + (higher.h4 || "不足") + "\n" +
+        "新ルール実績：" + (result.actualWinRate || "検証中") + "\n" +
+        "過去参考：" + (bt.text || "未検証") + "\n" +
+        "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
+        "更新：" + new Date(result.checkedAt).toLocaleString("ja-JP") +
+        (old || result.stale ? "（データが古いため確認が必要）" : "");
+      box.appendChild(row);
     }
-
-    if (data.shouldNotify) {
-      const monitorKey =
-        data.pair + "-" +
-        data.direction;
-
-      const now = Date.now();
-      const cooldownPassed =
-        now - lastMonitorTime >= MONITOR_COOLDOWN;
-
-      if (
-        monitorKey !== lastMonitorKey ||
-        cooldownPassed
-      ) {
-        lastMonitorKey = monitorKey;
-        lastMonitorTime = now;
-
-        localStorage.setItem(
-          "fxLastMonitorKey",
-          lastMonitorKey
-        );
-
-        localStorage.setItem(
-          "fxLastMonitorTime",
-          String(lastMonitorTime)
-        );
-
-        alert(
-         "FX自動監視\n\n" +
-         "通貨ペア：" + data.pair + "\n" +
-         "方向：" + data.direction + "\n" +
-         "スコア：" + data.score + "点\n" +
-         "現在価格：" + data.currentPrice + "\n" +
-         "エントリー：" + data.entryPrice + "\n" +
-         "利確：" + data.takeProfit + "\n" +
-         "損切り：" + data.stopLoss + "\n" +
-         "RR：" + data.riskReward
-       );
-      }
-    }
-
-  } catch (error) {
-    console.error("FX自動監視に失敗:", error);
-  }
+  } catch (error) { box.textContent = "監視状況：" + error.message; }
 }
 
 // ===== 自動監視ステータス表示 =====
 const monitorStatus = document.createElement("div");
 
-monitorStatus.textContent = "🟢 FX自動監視中（15分ごと）";
+monitorStatus.textContent = "FX定期監視（15分ごと）";
 
 monitorStatus.style.position = "fixed";
 monitorStatus.style.bottom = "15px";
@@ -1264,6 +1232,8 @@ if (notificationPair) {
     (notificationParams.get("direction") || "") + "候補\n" +
     "判定スコア：" + (notificationParams.get("score") || "-") + "点\n" +
     "実績勝率：" + (notificationParams.get("winRate") || "-") + "\n" +
+    "過去参考：" + (notificationParams.get("backtest") || "未記録") + "\n" +
+    "1時間足：" + (notificationParams.get("h1") || "未記録") + "／4時間足：" + (notificationParams.get("h4") || "未記録") + "\n" +
     "エントリー：" + (notificationParams.get("entry") || "-") + "\n" +
     "利確：" + (notificationParams.get("takeProfit") || "-") + "\n" +
     "損切り：" + (notificationParams.get("stopLoss") || "-") + "\n" +

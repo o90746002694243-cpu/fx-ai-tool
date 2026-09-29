@@ -1,3 +1,4 @@
+const { STRATEGY_VERSION, outcome, formatSummary } = require("./strategy");
 const STORE_NAME = "fx-trade-results";
 const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
@@ -30,6 +31,7 @@ function normalizeTracker(saved) {
     tracker.stats = {};
   }
 
+  if (!tracker.strategyStats) tracker.strategyStats = {};
   return tracker;
 }
 
@@ -115,6 +117,18 @@ function settlePairSignals(
       continue;
     }
 
+    if (signal.strategyVersion === STRATEGY_VERSION) {
+      const currentStats = getStrategyStats(tracker, pair);
+      let result = null;
+      for (const candle of candles) {
+        result = outcome(signal, candle);
+        if (result) break;
+      }
+      if (!result && now - signal.entryAt >= EXPIRY_MS) result = "expired";
+      if (result) currentStats[result] += 1;
+      else remainingSignals.push(signal);
+      continue;
+    }
     const newerCandles =
       getNewerCandles(candles, signal);
 
@@ -242,38 +256,23 @@ function addSignal(tracker, signal) {
     stopLoss,
     score: Number(signal.score),
     candleTime: String(signal.candleTime || ""),
+    strategyVersion: signal.strategyVersion,
+    entryAt: Number(signal.entryAt) || Date.now(),
     createdAt: Date.now()
   });
 
   return true;
 }
 
+function getStrategyStats(tracker, pair) {
+  if (!tracker.strategyStats) tracker.strategyStats = {};
+  if (!tracker.strategyStats[STRATEGY_VERSION]) tracker.strategyStats[STRATEGY_VERSION] = {};
+  const bucket = tracker.strategyStats[STRATEGY_VERSION];
+  if (!bucket[pair]) bucket[pair] = {wins:0,losses:0,ambiguous:0,expired:0};
+  return bucket[pair];
+}
 function formatActualWinRate(tracker, pair) {
-  const stats = getPairStats(tracker, pair);
-  const completed = stats.wins + stats.losses;
-
-  if (completed < MIN_SAMPLE_SIZE) {
-    return (
-      "検証中（" +
-      completed +
-      "/" +
-      MIN_SAMPLE_SIZE +
-      "件）"
-    );
-  }
-
-  const winRate = Math.round(
-    (stats.wins / completed) * 100
-  );
-
-  return (
-    winRate +
-    "%（" +
-    stats.wins +
-    "勝" +
-    stats.losses +
-    "敗）"
-  );
+  return formatSummary(getStrategyStats(tracker,pair));
 }
 
 async function saveTracker(store, tracker) {

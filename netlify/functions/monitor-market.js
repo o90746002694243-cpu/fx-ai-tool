@@ -1,3 +1,4 @@
+const { evaluate, normalizeCandles, backtest, STRATEGY_VERSION } = require("./strategy");
 const {
   loadTracker,
   settlePairSignals,
@@ -123,8 +124,8 @@ const pairsToCheck = [
     }
 
     const url =
-  `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(pair)}&interval=${interval}&outputsize=50&apikey=${apiKey}`;
-    const response = await fetch(url);
+  `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(pair)}&interval=${interval}&outputsize=5000&timezone=UTC&apikey=${apiKey}`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
     const data = await response.json();
 
     if (!response.ok || data.status === "error") {
@@ -144,235 +145,18 @@ const pairsToCheck = [
       );
     }
 
-    // Twelve Dataは新しい足から返すので古い順に並べ直す
-    const candles = values
-      .map(v => ({
-        datetime: v.datetime,
-        open: Number(v.open),
-        high: Number(v.high),
-        low: Number(v.low),
-        close: Number(v.close)
-      }))
-      .reverse();
-
-    const closes = candles.map(c => c.close);
-
-    function sma(list, period) {
-      const part = list.slice(-period);
-      return (
-        part.reduce((sum, n) => sum + n, 0) /
-        part.length
-      );
-    }
-
-    function calcRsi(list, period = 14) {
-      const recent = list.slice(-(period + 1));
-
-      let gains = 0;
-      let losses = 0;
-
-      for (let i = 1; i < recent.length; i++) {
-        const diff = recent[i] - recent[i - 1];
-
-        if (diff > 0) {
-          gains += diff;
-        } else {
-          losses += Math.abs(diff);
-        }
-      }
-
-      if (losses === 0) {
-        return 100;
-      }
-
-      const rs =
-        (gains / period) /
-        (losses / period);
-
-      return 100 - 100 / (1 + rs);
-    }
-
-    const currentPrice =
-      closes[closes.length - 1];
-
-    const previousPrice =
-      closes[closes.length - 2];
-
-    const sma5 = sma(closes, 5);
-    const sma20 = sma(closes, 20);
-    const rsi = calcRsi(closes);
-
-    const latest =
-      candles[candles.length - 1];
-
-    settlePairSignals(
-  tracker,
-  pair,
-  candles
-);  
-
-    const previous20 =
-      candles.slice(-21, -1);
-
-    const resistance =
-      Math.max(...previous20.map(c => c.high));
-
-    const support =
-      Math.min(...previous20.map(c => c.low));
-
-    let buyScore = 0;
-    let sellScore = 0;
-
-    // 短期・中期トレンド
-    if (sma5 > sma20) {
-      buyScore += 30;
-    }
-
-    if (sma5 < sma20) {
-      sellScore += 30;
-    }
-
-    // 現在価格と短期平均
-    if (currentPrice > sma5) {
-      buyScore += 20;
-    }
-
-    if (currentPrice < sma5) {
-      sellScore += 20;
-    }
-
-    // モメンタム
-    if (currentPrice > previousPrice) {
-      buyScore += 15;
-    }
-
-    if (currentPrice < previousPrice) {
-      sellScore += 15;
-    }
-
-    // RSI
-    if (rsi >= 50 && rsi <= 70) {
-      buyScore += 20;
-    }
-
-    if (rsi >= 30 && rsi < 50) {
-      sellScore += 20;
-    }
-
-    // ローソク足方向
-    if (latest.close > latest.open) {
-      buyScore += 15;
-    }
-
-    if (latest.close < latest.open) {
-      sellScore += 15;
-    }
-
-    const direction =
-      buyScore > sellScore
-        ? "買い"
-        : sellScore > buyScore
-        ? "売り"
-        : "見送り";
-
-    const rawScore = Math.max(buyScore, sellScore);
-const oppositeScore = Math.min(buyScore, sellScore);
-
-const score = Math.max(
-  0,
-  Math.min(
-    95,
-    Math.round(
-      50 + (rawScore - oppositeScore) * 0.4
-    )
-  )
-);
-
-    const isRsiExtreme =
-  (direction === "買い" && rsi >= 65) ||
-  (direction === "売り" && rsi <= 35);
-
-const previousBodies = candles
-  .slice(-6, -1)
-  .map(c =>
-    Math.abs(
-      Number(c.close) - Number(c.open)
-    )
-  )
-  .filter(v => Number.isFinite(v));
-
-const averageBody =
-  previousBodies.length > 0
-    ? previousBodies.reduce(
-        (sum, value) => sum + value,
-        0
-      ) / previousBodies.length
-    : 0;
-
-const latestBody = Math.abs(
-  Number(latest.close) - Number(latest.open)
-);
-
-const isSharpMove =
-  averageBody > 0 &&
-  latestBody >= averageBody * 1.8;
-
-const alreadyTracking =
-  hasOpenSignal(tracker, pair);
-
- const importantEvent = findImportantEvent(importantEvents, pair);
-      
-const shouldNotify =
-  score >= targetScore &&
-  direction !== "見送り" &&
-  !isRsiExtreme &&
-  !isSharpMove &&
-  !alreadyTracking &&
-  !importantEvent;     
-
-// ===== エントリー・利確・損切り自動計算 =====
-const entryPrice = currentPrice;
-
-const recentRanges = candles
-  .slice(-14)
-  .map(c => Number(c.high) - Number(c.low))
-  .filter(v => Number.isFinite(v) && v > 0);
-
-const averageRange =
-  recentRanges.length > 0
-    ? recentRanges.reduce((sum, value) => sum + value, 0) /
-      recentRanges.length
-    : 0.1;
-
-  const maxRange = currentPrice * 0.003;
-const safeRange = Math.min(averageRange, maxRange);
-      
-let takeProfit = currentPrice;
-let stopLoss = currentPrice;
-
-if (direction === "買い") {
-  stopLoss = currentPrice - safeRange;
-
-  takeProfit =
-    currentPrice +
-    safeRange * 1.5;
-}
-
-if (direction === "売り") {
-  stopLoss = currentPrice + safeRange;
-
-  takeProfit =
-    currentPrice -
-    safeRange * 1.5;
-}
-
-const riskReward =
-  direction === "見送り"
-    ? 0
-    : Math.abs(takeProfit - entryPrice) /
-
-      Math.abs(entryPrice - stopLoss);
-
+    const candles = normalizeCandles(values);
+    if (candles.length < 21) throw new Error("確定した相場データが不足しています。");
+    const latest = candles[candles.length - 1];
+    const history = backtest(candles);
+    const analysis = evaluate(candles);
+    const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
+      sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
+    settlePairSignals(tracker, pair, candles);
+    const alreadyTracking = hasOpenSignal(tracker, pair);
+    const importantEvent = findImportantEvent(importantEvents, pair);
+    const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
+    const shouldNotify = analysis.eligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
 
@@ -400,7 +184,9 @@ const actualWinRateText =
         takeProfit,
         stopLoss,
         score,
-        candleTime: latest.datetime
+        candleTime: latest.datetime,
+        entryAt: Date.now(),
+        strategyVersion: STRATEGY_VERSION
       });
       
 if (shouldNotify && !isDuplicate) {
@@ -429,7 +215,9 @@ if (shouldNotify && !isDuplicate) {
   en:
     pair + " " + direction + "候補\n" +
     "判定スコア：" + score + "点\n" +
-    "実績勝率: " + actualWinRateText + "\n" +
+    "新ルール実績: " + actualWinRateText + "\n" +
+    "過去参考: " + history.text + "\n" +
+    "1時間足：" + higherTimeframes.h1 + "／4時間足：" + higherTimeframes.h4 + "\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
@@ -442,6 +230,9 @@ if (shouldNotify && !isDuplicate) {
     direction,
     score: String(score),
     winRate: actualWinRateText,
+    backtest: history.text,
+    h1: higherTimeframes.h1,
+    h4: higherTimeframes.h4,
     entry: entryPrice.toFixed(3),
     takeProfit: takeProfit.toFixed(3),
     stopLoss: stopLoss.toFixed(3),
@@ -504,6 +295,12 @@ if (shouldNotify && !isDuplicate) {
         score,
 
         targetScore,
+        strategyVersion: STRATEGY_VERSION,
+        actualWinRate: actualWinRateText,
+        backtest: history,
+        higherTimeframes,
+        stale,
+        note: "通知条件はスコア90以上・上位足一致等。勝率80%の保証ではありません。",
 
         shouldNotify,
 
@@ -540,6 +337,14 @@ if (shouldNotify && !isDuplicate) {
 
 }
 
+if (tradeStore) {
+  for (const result of results) {
+    const value = JSON.parse(result.body);
+    await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
+      ...value, checkedAt: new Date().toISOString()
+    });
+  }
+}
 const tradeSaved = await saveTracker(tradeStore, tracker);
 console.log("FX trade tracker status:", {
   storeAvailable: Boolean(tradeStore),
