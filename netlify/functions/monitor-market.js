@@ -100,14 +100,7 @@ const {
   "EUR/JPY",
 ];
     
-    const slot =
-  Math.floor(Date.now() / (15 * 60 * 1000)) %
-  pairs.length;
-
-const pairsToCheck = [
-  pairs[slot],
-  pairs[(slot + 1) % pairs.length]
-];
+        const pairsToCheck = pairs;
 
     const interval = "15min";
     const targetScore = 90;
