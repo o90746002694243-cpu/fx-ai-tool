@@ -293,6 +293,43 @@ if (shouldNotify && !isDuplicate) {
         actualWinRate: actualWinRateText,
         backtest: history,
         chartPattern: analysis.chartPattern,
+                patternStats: [
+          "なし",
+          "ダブルトップ・一致",
+          "ダブルトップ・逆方向",
+          "ダブルボトム・一致",
+          "ダブルボトム・逆方向"
+        ].map(pattern => {
+          const s =
+            tracker.patternStats?.[STRATEGY_VERSION]
+              ?.[pair]?.[pattern] || {
+                wins: 0,
+                losses: 0,
+                ambiguous: 0,
+                expired: 0,
+                winDistanceSum: 0,
+                lossDistanceSum: 0
+              };
+
+          const total =
+            s.wins + s.losses + s.ambiguous + s.expired;
+
+          return {
+            pattern,
+            ...s,
+            total,
+            winRate: total
+              ? Math.round(1000 * s.wins / total) / 10
+              : null,
+            averageWinPips: s.wins
+              ? Number((s.winDistanceSum / s.wins * 100).toFixed(1))
+              : null,
+            averageLossPips: s.losses
+              ? Number((s.lossDistanceSum / s.losses * 100).toFixed(1))
+              : null,
+            note: "円ペアの仮想TP/SL値幅。スプレッド・滑り未反映。"
+          };
+        }),
         higherTimeframes,
         stale,
         note: "通知条件はスコア90以上・上位足一致等。勝率80%の保証ではありません。",
