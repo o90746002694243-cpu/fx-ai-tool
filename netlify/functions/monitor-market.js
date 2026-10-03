@@ -179,7 +179,8 @@ const actualWinRateText =
         score,
         candleTime: latest.datetime,
         entryAt: Date.now(),
-        strategyVersion: STRATEGY_VERSION
+        strategyVersion: STRATEGY_VERSION,
+        chartPattern: analysis.chartPattern
       });
       
 if (shouldNotify && !isDuplicate) {
@@ -291,6 +292,7 @@ if (shouldNotify && !isDuplicate) {
         strategyVersion: STRATEGY_VERSION,
         actualWinRate: actualWinRateText,
         backtest: history,
+        chartPattern: analysis.chartPattern,
         higherTimeframes,
         stale,
         note: "通知条件はスコア90以上・上位足一致等。勝率80%の保証ではありません。",
