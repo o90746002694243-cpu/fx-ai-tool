@@ -255,6 +255,7 @@ function addSignal(tracker, signal) {
     takeProfit,
     stopLoss,
     score: Number(signal.score),
+    chartPattern: signal.chartPattern || null,
     candleTime: String(signal.candleTime || ""),
     strategyVersion: signal.strategyVersion,
     entryAt: Number(signal.entryAt) || Date.now(),
