@@ -125,8 +125,68 @@ function settlePairSignals(
         if (result) break;
       }
       if (!result && now - signal.entryAt >= EXPIRY_MS) result = "expired";
-      if (result) currentStats[result] += 1;
-      else remainingSignals.push(signal);
+            if (result) {
+        currentStats[result] += 1;
+
+        const pattern = signal.chartPattern;
+
+        if (
+          pattern &&
+          ["なし", "ダブルトップ", "ダブルボトム"]
+            .includes(pattern.name)
+        ) {
+          const group = pattern.name === "なし"
+            ? "なし"
+            : pattern.name + (
+                pattern.direction === signal.direction
+                  ? "・一致"
+                  : "・逆方向"
+              );
+
+          if (!tracker.patternStats) {
+            tracker.patternStats = {};
+          }
+
+          if (!tracker.patternStats[STRATEGY_VERSION]) {
+            tracker.patternStats[STRATEGY_VERSION] = {};
+          }
+
+          const versionStats =
+            tracker.patternStats[STRATEGY_VERSION];
+
+          if (!versionStats[pair]) {
+            versionStats[pair] = {};
+          }
+
+          if (!versionStats[pair][group]) {
+            versionStats[pair][group] = {
+              wins: 0,
+              losses: 0,
+              ambiguous: 0,
+              expired: 0,
+              winDistanceSum: 0,
+              lossDistanceSum: 0
+            };
+          }
+
+          const bucket = versionStats[pair][group];
+          bucket[result] += 1;
+
+          if (result === "wins") {
+            bucket.winDistanceSum += Math.abs(
+              signal.takeProfit - signal.entryPrice
+            );
+          }
+
+          if (result === "losses") {
+            bucket.lossDistanceSum += Math.abs(
+              signal.stopLoss - signal.entryPrice
+            );
+          }
+        }
+      } else {
+        remainingSignals.push(signal);
+      }
       continue;
     }
     const newerCandles =
