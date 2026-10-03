@@ -38,6 +38,93 @@ function trend(bars, asOf) {
   const short = mean(closed.slice(-5)), long = mean(closed);
   return short > long ? "買い" : short < long ? "売り" : "横ばい";
 }
+
+// 確定足でネックラインを抜けたパターンだけ検出
+function detectChartPattern(candles) {
+  const bars = candles.slice(-50);
+  const none = {
+    name: "なし",
+    direction: null,
+    neckline: null
+  };
+
+  if (bars.length < 12) return none;
+
+  const last = bars.length - 1;
+  const recent = bars.slice(-14);
+  const averageRange = recent.reduce(
+    (sum, c) => sum + c.high - c.low,
+    0
+  ) / recent.length;
+
+  if (!(averageRange > 0)) return none;
+
+  const tolerance = averageRange * 0.5;
+
+  for (const type of ["top", "bottom"]) {
+    const isTop = type === "top";
+    const field = isTop ? "high" : "low";
+    const pivots = [];
+
+    // 左右2本で山・谷を確認。最新足の前に確定済みのもの
+    for (let i = 2; i <= last - 3; i++) {
+      const value = bars[i][field];
+      const neighbours = [
+        bars[i - 2][field],
+        bars[i - 1][field],
+        bars[i + 1][field],
+        bars[i + 2][field]
+      ];
+
+      if (neighbours.every(n =>
+        isTop ? value > n : value < n
+      )) {
+        pivots.push(i);
+      }
+    }
+
+    if (pivots.length < 2) continue;
+
+    const a = pivots.at(-2);
+    const b = pivots.at(-1);
+
+    if (b - a < 4 || b - a > 24) continue;
+
+    if (
+      Math.abs(bars[a][field] - bars[b][field]) >
+      tolerance
+    ) continue;
+
+    const middle = bars.slice(a + 1, b);
+    const neckline = isTop
+      ? Math.min(...middle.map(c => c.low))
+      : Math.max(...middle.map(c => c.high));
+
+    const depth = isTop
+      ? Math.min(bars[a].high, bars[b].high) - neckline
+      : neckline - Math.max(bars[a].low, bars[b].low);
+
+    if (depth < averageRange) continue;
+
+    const before = bars[last - 1].close;
+    const current = bars[last].close;
+
+    const crossed = isTop
+      ? before >= neckline && current < neckline
+      : before <= neckline && current > neckline;
+
+    if (!crossed) continue;
+
+    return {
+      name: isTop ? "ダブルトップ" : "ダブルボトム",
+      direction: isTop ? "売り" : "買い",
+      neckline
+    };
+  }
+
+  return none;
+}
+
 function evaluate(candles, higher = null) {
   if (candles.length < 21) return null;
     const closes = candles.map(c => c.close);
@@ -240,6 +327,7 @@ const riskReward =
       Math.abs(entryPrice - stopLoss);
 
 
+   const chartPattern = detectChartPattern(candles);
   const asOf = latest.endTime;
   const higherTimeframes = {
     h1: trend(higher ? higher.h1 : aggregate(candles,1), asOf),
@@ -247,7 +335,7 @@ const riskReward =
   };
   const higherAligned = higherTimeframes.h1 === direction && higherTimeframes.h4 === direction;
   const eligible = score >= 90 && direction !== "見送り" && !isRsiExtreme && !isSharpMove && higherAligned && safeRange > 0;
-  return { direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
+   return { chartPattern, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
     sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove,
     higherTimeframes, higherAligned, eligible, candleTime: latest.datetime, entryAt: asOf };
 }
