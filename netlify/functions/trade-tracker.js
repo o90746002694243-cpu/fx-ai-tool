@@ -117,8 +117,12 @@ function settlePairSignals(
       continue;
     }
 
-    if (signal.strategyVersion === STRATEGY_VERSION) {
-      const currentStats = getStrategyStats(tracker, pair);
+    if (signal.strategyVersion) {
+  const currentStats = getStrategyStats(
+    tracker,
+    pair,
+    signal.strategyVersion
+  );
       let result = null;
       for (const candle of candles) {
         result = outcome(signal, candle);
@@ -147,12 +151,12 @@ function settlePairSignals(
             tracker.patternStats = {};
           }
 
-          if (!tracker.patternStats[STRATEGY_VERSION]) {
-            tracker.patternStats[STRATEGY_VERSION] = {};
-          }
+          if (!tracker.patternStats[signal.strategyVersion]) {
+  tracker.patternStats[signal.strategyVersion] = {};
+}
 
-          const versionStats =
-            tracker.patternStats[STRATEGY_VERSION];
+const versionStats =
+  tracker.patternStats[signal.strategyVersion];
 
           if (!versionStats[pair]) {
             versionStats[pair] = {};
@@ -324,12 +328,31 @@ function addSignal(tracker, signal) {
 
   return true;
 }
+function getStrategyStats(
+  tracker,
+  pair,
+  strategyVersion = STRATEGY_VERSION
+) {
+  if (!tracker.strategyStats) {
+    tracker.strategyStats = {};
+  }
 
-function getStrategyStats(tracker, pair) {
-  if (!tracker.strategyStats) tracker.strategyStats = {};
-  if (!tracker.strategyStats[STRATEGY_VERSION]) tracker.strategyStats[STRATEGY_VERSION] = {};
-  const bucket = tracker.strategyStats[STRATEGY_VERSION];
-  if (!bucket[pair]) bucket[pair] = {wins:0,losses:0,ambiguous:0,expired:0};
+  if (!tracker.strategyStats[strategyVersion]) {
+    tracker.strategyStats[strategyVersion] = {};
+  }
+
+  const bucket =
+    tracker.strategyStats[strategyVersion];
+
+  if (!bucket[pair]) {
+    bucket[pair] = {
+      wins: 0,
+      losses: 0,
+      ambiguous: 0,
+      expired: 0
+    };
+  }
+
   return bucket[pair];
 }
 function formatActualWinRate(tracker, pair) {
