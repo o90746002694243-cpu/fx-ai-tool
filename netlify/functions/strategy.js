@@ -1,5 +1,5 @@
 // Both live monitoring and historical replay use this rule implementation.
-const STRATEGY_VERSION = "mtf-v2";
+const STRATEGY_VERSION = "mtf-v3-minrange";
 const BAR_MS = 15 * 60 * 1000;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 function parseTime(value) {
@@ -297,8 +297,14 @@ const averageRange =
       recentRanges.length
     : 0.1;
 
-  const maxRange = currentPrice * 0.003;
+// 円通貨ペア用の検証設定：0.10円＝10pips
+const minRange = 0.10;
+const maxRange = currentPrice * 0.003;
 const safeRange = Math.min(averageRange, maxRange);
+
+const isRangeTooSmall =
+  recentRanges.length < 14 ||
+  safeRange < minRange;
       
 let takeProfit = currentPrice;
 let stopLoss = currentPrice;
@@ -334,7 +340,14 @@ const riskReward =
     h4: trend(higher ? higher.h4 : aggregate(candles,4), asOf)
   };
   const higherAligned = higherTimeframes.h1 === direction && higherTimeframes.h4 === direction;
-  const eligible = score >= 90 && direction !== "見送り" && !isRsiExtreme && !isSharpMove && higherAligned && safeRange > 0;
+  const eligible =
+  score >= 90 &&
+  direction !== "見送り" &&
+  !isRsiExtreme &&
+  !isSharpMove &&
+  higherAligned &&
+  safeRange > 0 &&
+  !isRangeTooSmall;
    return { chartPattern, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
     sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove,
     higherTimeframes, higherAligned, eligible, candleTime: latest.datetime, entryAt: asOf };
