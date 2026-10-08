@@ -234,6 +234,16 @@ function evaluate(candles, higher = null) {
       sellScore += 15;
     }
 
+    console.log("FX score breakdown:", {
+  buyScore,
+  sellScore,
+  sma5,
+  sma20,
+  rsi,
+  currentPrice,
+  previousPrice
+});
+  
     const direction =
       buyScore > sellScore
         ? "買い"
