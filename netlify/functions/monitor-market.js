@@ -169,21 +169,8 @@ const isDuplicate = hasOpenSignal(tracker, pair);
 const actualWinRateText =
   formatActualWinRate(tracker, pair);
       
+    let notificationSent = false;
     if (shouldNotify && !isDuplicate) {
-            addSignal(tracker, {
-        pair,
-        direction,
-        entryPrice,
-        takeProfit,
-        stopLoss,
-        score,
-        candleTime: latest.datetime,
-        entryAt: Date.now(),
-        strategyVersion: STRATEGY_VERSION,
-        chartPattern: analysis.chartPattern
-      });
-      
-if (shouldNotify && !isDuplicate) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
@@ -239,10 +226,25 @@ if (shouldNotify && !isDuplicate) {
         const notificationResult =
           await notificationResponse.json();
         
-        console.log(
-          "OneSignal notification result:",
-          notificationResult
-        );
+        // HTTP 200 alone does not mean OneSignal accepted any recipients.
+        const recipientCount = Number(notificationResult?.recipients);
+        if (!notificationResponse.ok || notificationResult?.errors ||
+            !notificationResult?.id || !(recipientCount > 0)) {
+          throw new Error("OneSignal did not accept push: HTTP " +
+            notificationResponse.status + " " + JSON.stringify(notificationResult));
+        }
+        notificationSent = true;
+        console.log("OneSignal notification accepted:", {
+          pair, id: notificationResult.id, recipients: recipientCount
+        });
+        // Track only accepted push requests, not failed attempts.
+        const added = addSignal(tracker, {
+          pair, direction, entryPrice, takeProfit, stopLoss, score,
+          candleTime: latest.datetime, entryAt: Date.now(),
+          strategyVersion: STRATEGY_VERSION,
+          chartPattern: analysis.chartPattern
+        });
+        if (!added) console.error("Push accepted but trade signal was not recorded:", pair);
         
       } catch (notificationError) {
         console.error(
@@ -251,7 +253,6 @@ if (shouldNotify && !isDuplicate) {
         );
       }
     }
-    }
     console.log("FX monitor result:", {
       pair,
       interval,
@@ -259,6 +260,7 @@ if (shouldNotify && !isDuplicate) {
       direction,
       score,
       shouldNotify,
+      notificationSent,
       eligible: analysis.eligible,
       higherAligned: analysis.higherAligned,
       higherTimeframes,
@@ -343,6 +345,7 @@ if (shouldNotify && !isDuplicate) {
         note: "通知条件はスコア90以上・上位足一致等。勝率80%の保証ではありません。",
 
         shouldNotify,
+        notificationSent,
 
         entryPrice:
           Number(entryPrice.toFixed(3)),
