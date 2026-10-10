@@ -141,8 +141,8 @@ const {
     const candles = normalizeCandles(values);
     if (candles.length < 21) throw new Error("確定した相場データが不足しています。");
     const latest = candles[candles.length - 1];
-    const history = backtest(candles);
-    const analysis = evaluate(candles);
+    const history = backtest(candles, pair);
+    const analysis = evaluate(candles, null, pair);
     const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
@@ -202,7 +202,9 @@ const actualWinRateText =
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
-    "RR：1:" + riskReward.toFixed(2)
+    "コスト控除後RR：1:" + riskReward.toFixed(2) + "（概算）\n" +
+    "ATR：" + (analysis.atrPips?.toFixed(1) ?? "不足") + "pips／ADX：" + (analysis.adx?.toFixed(1) ?? "不足") + "\n" +
+    "想定スプレッド：" + analysis.spreadPips + "pips"
 },
               web_url:
   "https://lively-salmiakki-ff3953.netlify.app/?" +
@@ -276,7 +278,8 @@ const actualWinRateText =
       entryPrice,
       takeProfit,
       stopLoss,
-      riskReward
+      riskReward,
+      adx: analysis.adx, atrPips:analysis.atrPips, spreadPips:analysis.spreadPips
     });
 
     results.push({
@@ -357,7 +360,18 @@ const actualWinRateText =
           Number(stopLoss.toFixed(3)),
 
         riskReward:
-          Number(riskReward.toFixed(2)),  
+          Number(riskReward.toFixed(2)),
+        costEstimate: {
+          spreadPips: analysis.spreadPips,
+          atrPips: analysis.atrPips === null ? null : Number(analysis.atrPips.toFixed(1)),
+          adx: analysis.adx === null ? null : Number(analysis.adx.toFixed(1)),
+          netRewardPips: Number(analysis.netRewardPips.toFixed(1)),
+          netRiskPips: Number(analysis.netRiskPips.toFixed(1)),
+          breakevenWinRate: Number(analysis.breakevenWinRate.toFixed(1)),
+          hypotheticalExpectancyPipsAt60Pct: Number(analysis.hypotheticalExpectancyPips.toFixed(2)),
+          candleSignal: analysis.candleSignal,
+          warning: "スプレッドは固定仮定。勝率60%は試算条件であり実績・予測ではありません。"
+        },  
 
         indicators: {
            sma5:

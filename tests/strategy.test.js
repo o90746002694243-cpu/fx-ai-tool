@@ -93,3 +93,28 @@ test('monitor builds saved read-only summaries without contacting push on stale 
     require.cache[modulePath]=previous;
   }
 });
+test('ATR and ADX use only completed historical candles and are finite',()=>{
+  const {atrAdx,candlePattern,PAIR_SETTINGS,STRATEGY_VERSION}=require('../netlify/functions/strategy');
+  const bars=normalizeCandles(rows(100),Infinity);
+  const a=atrAdx(bars), b=atrAdx(bars.slice(0,-1));
+  assert(Number.isFinite(a.atr)&&a.atr>0);
+  assert(Number.isFinite(a.adx)&&a.adx>=0&&a.adx<=100);
+  assert(Number.isFinite(b.atr));
+  assert.equal(atrAdx(bars.slice(0,20)).adx,null);
+  assert.equal(typeof candlePattern(bars),'string');
+  assert(PAIR_SETTINGS['NZD/JPY'].spreadPips>PAIR_SETTINGS['USD/JPY'].spreadPips);
+  assert.equal(STRATEGY_VERSION,'mtf-v4-atr-adx-cost');
+});
+test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
+  const c=normalizeCandles(rows(500),Infinity);
+  for(const pair of ['USD/JPY','EUR/JPY','NZD/JPY']){
+    const e=evaluate(c,null,pair);
+    assert(e);
+    assert(e.netRiskPips>0);
+    assert(e.netRewardPips<Math.abs(e.takeProfit-e.entryPrice)/0.01);
+    assert(e.breakevenWinRate>0);
+    if(e.direction==='買い')assert(e.takeProfit>e.entryPrice&&e.stopLoss<e.entryPrice);
+    if(e.direction==='売り')assert(e.takeProfit<e.entryPrice&&e.stopLoss>e.entryPrice);
+    if(e.eligible)assert(e.riskReward>=1.2&&e.adx>=18);
+  }
+});

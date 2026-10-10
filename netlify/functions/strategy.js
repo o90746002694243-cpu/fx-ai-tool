@@ -1,5 +1,5 @@
 // Both live monitoring and historical replay use this rule implementation.
-const STRATEGY_VERSION = "mtf-v3-minrange";
+const STRATEGY_VERSION = "mtf-v4-atr-adx-cost";
 const BAR_MS = 15 * 60 * 1000;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 function parseTime(value) {
@@ -125,7 +125,52 @@ function detectChartPattern(candles) {
   return none;
 }
 
-function evaluate(candles, higher = null) {
+// Fixed conservative spread assumptions (JPY price units); configure to match broker quotes.
+const PAIR_SETTINGS = Object.freeze({
+  "USD/JPY": {spreadPips:0.3, minAtrPips:6, adxMin:18},
+  "EUR/JPY": {spreadPips:0.6, minAtrPips:7, adxMin:18},
+  "AUD/JPY": {spreadPips:0.6, minAtrPips:7, adxMin:18},
+  "NZD/JPY": {spreadPips:0.9, minAtrPips:8, adxMin:18},
+  "CAD/JPY": {spreadPips:0.9, minAtrPips:8, adxMin:18}
+});
+function atrAdx(candles, period = 14) {
+  if (candles.length < period * 2 + 1) return {atr:null,adx:null};
+  const tr=[], plus=[], minus=[];
+  for(let i=1;i<candles.length;i++) {
+    const c=candles[i], prev=candles[i-1];
+    tr.push(Math.max(c.high-c.low,Math.abs(c.high-prev.close),Math.abs(c.low-prev.close)));
+    const up=c.high-prev.high, down=prev.low-c.low;
+    plus.push(up>down && up>0?up:0);
+    minus.push(down>up && down>0?down:0);
+  }
+  const sum=a=>a.reduce((x,y)=>x+y,0);
+  let t=sum(tr.slice(0,period)), p=sum(plus.slice(0,period)), m=sum(minus.slice(0,period));
+  const dx=[];
+  const calc=()=>{const pd=t?100*p/t:0,md=t?100*m/t:0;return pd+md?100*Math.abs(pd-md)/(pd+md):0;};
+  dx.push(calc());
+  for(let i=period;i<tr.length;i++) {
+    t=t-t/period+tr[i];p=p-p/period+plus[i];m=m-m/period+minus[i];
+    dx.push(calc());
+  }
+  if(dx.length < period) return {atr:t/period,adx:null};
+  let adx=sum(dx.slice(0,period))/period;
+  for(const v of dx.slice(period)) adx=(adx*(period-1)+v)/period;
+  return {atr:t/period,adx};
+}
+function candlePattern(candles) {
+  if(candles.length<2)return "なし";
+  const c=candles.at(-1),p=candles.at(-2),body=Math.abs(c.close-c.open);
+  const range=c.high-c.low;
+  if(range<=0)return "なし";
+  if(body/range<0.12)return "十字線";
+  if(c.close>c.open && p.close<p.open && c.open<=p.close && c.close>=p.open)return "強気包み足";
+  if(c.close<c.open && p.close>p.open && c.open>=p.close && c.close<=p.open)return "弱気包み足";
+  const upper=c.high-Math.max(c.open,c.close),lower=Math.min(c.open,c.close)-c.low;
+  if(lower>body*2.5 && upper<body)return "下ヒゲ反発";
+  if(upper>body*2.5 && lower<body)return "上ヒゲ反落";
+  return "なし";
+}
+function evaluate(candles, higher = null, pair = "USD/JPY") {
   if (candles.length < 21) return null;
     const closes = candles.map(c => c.close);
 
@@ -234,16 +279,6 @@ function evaluate(candles, higher = null) {
       sellScore += 15;
     }
 
-    console.log("FX score breakdown:", {
-  buyScore,
-  sellScore,
-  sma5,
-  sma20,
-  rsi,
-  currentPrice,
-  previousPrice
-});
-  
     const direction =
       buyScore > sellScore
         ? "買い"
@@ -296,26 +331,19 @@ const isSharpMove =
 // ===== エントリー・利確・損切り自動計算 =====
 const entryPrice = currentPrice;
 
-const recentRanges = candles
-  .slice(-14)
-  .map(c => Number(c.high) - Number(c.low))
-  .filter(v => Number.isFinite(v) && v > 0);
+const settings=PAIR_SETTINGS[pair] || PAIR_SETTINGS["USD/JPY"];
+const {atr,adx}=atrAdx(candles);
+const atrPips=atr===null?null:atr/0.01;
+const spreadPrice=settings.spreadPips*0.01;
+const minRange= settings.minAtrPips*0.01;
+const maxRange=currentPrice*0.003;
+const safeRange=atr===null?0:Math.min(atr*1.25,maxRange);
+const isRangeTooSmall=atr===null || atr<minRange;
+const isWeakTrend=adx===null || adx<settings.adxMin;
+const candleSignal=candlePattern(candles);
+const isCandleOpposed=(direction==="買い" && (candleSignal==="弱気包み足" || candleSignal==="上ヒゲ反落")) ||
+  (direction==="売り" && (candleSignal==="強気包み足" || candleSignal==="下ヒゲ反発"));
 
-const averageRange =
-  recentRanges.length > 0
-    ? recentRanges.reduce((sum, value) => sum + value, 0) /
-      recentRanges.length
-    : 0.1;
-
-// 円通貨ペア用の検証設定：0.10円＝10pips
-const minRange = 0.10;
-const maxRange = currentPrice * 0.003;
-const safeRange = Math.min(averageRange, maxRange);
-
-const isRangeTooSmall =
-  recentRanges.length < 14 ||
-  safeRange < minRange;
-      
 let takeProfit = currentPrice;
 let stopLoss = currentPrice;
 
@@ -335,12 +363,14 @@ if (direction === "売り") {
     safeRange * 1.5;
 }
 
-const riskReward =
-  direction === "見送り"
-    ? 0
-    : Math.abs(takeProfit - entryPrice) /
-
-      Math.abs(entryPrice - stopLoss);
+const grossReward=Math.abs(takeProfit-entryPrice);
+const grossRisk=Math.abs(entryPrice-stopLoss);
+const netReward=grossReward-spreadPrice;
+const netRisk=grossRisk+spreadPrice;
+const riskReward=direction==="見送り" || !netRisk?0:netReward/netRisk;
+const breakevenWinRate=netReward>0?100*netRisk/(netRisk+netReward):100;
+// Illustration at a stated 60% win probability; NOT an estimated actual win rate.
+const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
 
 
    const chartPattern = detectChartPattern(candles);
@@ -357,8 +387,15 @@ const riskReward =
   !isSharpMove &&
   higherAligned &&
   safeRange > 0 &&
-  !isRangeTooSmall;
-   return { chartPattern, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
+  !isRangeTooSmall &&
+  !isWeakTrend &&
+  !isCandleOpposed &&
+  candleSignal!=="十字線" &&
+  netReward>0 && riskReward>=1.2 &&
+  grossReward >= spreadPrice*3;
+   return { chartPattern, candleSignal, atr, atrPips, adx, spreadPips:settings.spreadPips,
+    netRewardPips:netReward/0.01, netRiskPips:netRisk/0.01, breakevenWinRate,
+    hypotheticalExpectancyPips, isWeakTrend, isCandleOpposed, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
     sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove,
     higherTimeframes, higherAligned, eligible, candleTime: latest.datetime, entryAt: asOf };
 }
@@ -387,7 +424,7 @@ function formatSummary(stats) {
     "（" + s.total + "件・" + s.wins + "勝/" + s.losses + "敗・両方到達" + s.ambiguous + "・期限切れ" + s.expired + "）" +
     (s.sufficient ? "" : "／30件未満");
 }
-function backtest(candles) {
+function backtest(candles, pair = "USD/JPY") {
   const higher = {h1: aggregate(candles,1), h4: aggregate(candles,4)};
   const stats = {wins:0,losses:0,ambiguous:0,expired:0};
   let open = null, signals = 0;
@@ -399,12 +436,12 @@ function backtest(candles) {
       else if (c.endTime >= open.entryAt + EXPIRY_MS) {stats.expired++;open=null;}
     }
     if (open) continue;
-    const candidate = evaluate(candles.slice(Math.max(0,i-49),i+1), higher);
+    const candidate = evaluate(candles.slice(Math.max(0,i-49),i+1), higher, pair);
     if (candidate && candidate.eligible) {open=candidate;signals++;}
   }
   return {...summarize(stats), signals, unresolved:open ? 1:0,
     strategyVersion:STRATEGY_VERSION, from:candles[0]?.datetime || null, to:candles.at(-1)?.datetime || null,
     text:formatSummary(stats),
-    assumptions:"確定足終値で仮想約定。6時間以内のTP/SLを判定。両方到達・期限切れも分母に含む。スプレッド・滑り・過去の経済指標回避は未反映。実運用ではなく参考検証。"};
+    assumptions:"確定足終値で仮想約定。6時間以内のTP/SLを判定。両方到達・期限切れも分母に含む。スプレッドは通知判定の概算のみ反映。バックテスト損益・滑り・過去の経済指標回避は未反映。実運用ではなく参考検証。"};
 }
-module.exports = {STRATEGY_VERSION,BAR_MS,EXPIRY_MS,normalizeCandles,aggregate,trend,evaluate,outcome,summarize,formatSummary,backtest};
+module.exports = {PAIR_SETTINGS,atrAdx,candlePattern,STRATEGY_VERSION,BAR_MS,EXPIRY_MS,normalizeCandles,aggregate,trend,evaluate,outcome,summarize,formatSummary,backtest};
