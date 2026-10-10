@@ -8,4 +8,8 @@
   external_node_modules = ["@netlify/blobs"]
 
 [functions."monitor-market"]
-  schedule = "*/15 * * * *"
+  schedule = "*/15 * * * 1-5"
+
+# Short Sunday UTC window covers the Sunday evening New York FX reopening.
+[functions."monitor-market-open"]
+  schedule = "*/15 21-23 * * 0"
