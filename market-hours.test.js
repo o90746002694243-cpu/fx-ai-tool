@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {isFxMarketOpen} = require("../netlify/functions/fx-market-hours");
+const {isFxMarketOpen} = require("./netlify/functions/fx-market-hours");
 const cases = [
   ["2026-10-11T04:00:00Z", false], // Saturday midnight NY
   ["2026-10-11T20:59:00Z", false], // Sunday before DST open

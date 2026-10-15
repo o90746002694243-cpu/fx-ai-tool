@@ -84,6 +84,11 @@ function findImportantEvent(events, pair) {
 
 exports.handler = async function (event) {
   try {
+    // Avoid API calls and push notifications while the FX market is closed.
+    if (!require("./fx-market-hours").isFxMarketOpen()) {
+      return {statusCode:200, headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ok:true,skipped:true,reason:"fx-market-closed"})};
+    }
 
 const {
   store: tradeStore,
@@ -183,6 +188,9 @@ const actualWinRateText =
            },
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
+              idempotency_key: require("node:crypto").createHash("sha256")
+                .update([STRATEGY_VERSION, pair, direction, latest.datetime].join("|"))
+                .digest("hex"),
               target_channel: "push",
               include_subscription_ids: [
   "f7a8344c-34f9-44f8-8bb5-03f97a2fd645",
@@ -247,6 +255,10 @@ const actualWinRateText =
           chartPattern: analysis.chartPattern
         });
         if (!added) console.error("Push accepted but trade signal was not recorded:", pair);
+        else {
+          const immediatelySaved = await saveTracker(tradeStore, tracker);
+          if (!immediatelySaved) console.error("CRITICAL: Push accepted but trade record save failed:", pair);
+        }
         
       } catch (notificationError) {
         console.error(
