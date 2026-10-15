@@ -111,7 +111,9 @@ const {
     const targetScore = 90;
     const results = [];
 
+    const pairErrors = [];
     for (const pair of pairsToCheck) {
+      try {
 
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
@@ -151,6 +153,11 @@ const {
     const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
+    // Persist settlements before attempting a new push. A later API failure
+    // must not discard completed trade results from an earlier pair.
+    if (!await saveTracker(tradeStore, tracker)) {
+      throw new Error("実戦結果を保存できないため通知を停止しました。");
+    }
     const alreadyTracking = hasOpenSignal(tracker, pair);
     const importantEvent = findImportantEvent(importantEvents, pair);
     const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
@@ -403,7 +410,10 @@ const actualWinRateText =
         }
       })
     });
-
+      } catch (pairError) {
+        console.error("FX pair monitor failed:", pair, pairError);
+        pairErrors.push({pair, error: String(pairError.message || pairError)});
+      }
 }
 
 if (tradeStore) {
@@ -429,7 +439,8 @@ return {
   },
   body: JSON.stringify({
     ok: true,
-    results
+    results,
+    pairErrors
   })
 };
 

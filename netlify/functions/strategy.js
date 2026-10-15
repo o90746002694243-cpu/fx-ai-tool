@@ -401,7 +401,7 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
 }
 function outcome(signal, candle) {
   const entryAt = Number(signal.entryAt || signal.createdAt);
-  if (candle.time < entryAt || candle.endTime > entryAt + EXPIRY_MS) return null;
+  if (candle.time < entryAt || candle.time >= entryAt + EXPIRY_MS) return null;
   const buy = signal.direction === "買い";
   const tp = buy ? candle.high >= signal.takeProfit : candle.low <= signal.takeProfit;
   const sl = buy ? candle.low <= signal.stopLoss : candle.high >= signal.stopLoss;
