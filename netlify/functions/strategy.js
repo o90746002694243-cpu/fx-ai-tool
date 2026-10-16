@@ -395,7 +395,7 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   grossReward >= spreadPrice*3;
    return { chartPattern, candleSignal, atr, atrPips, adx, spreadPips:settings.spreadPips,
     netRewardPips:netReward/0.01, netRiskPips:netRisk/0.01, breakevenWinRate,
-    hypotheticalExpectancyPips, isWeakTrend, isCandleOpposed, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
+    hypotheticalExpectancyPips, isWeakTrend, isCandleOpposed, isRangeTooSmall, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
     sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove,
     higherTimeframes, higherAligned, eligible, candleTime: latest.datetime, entryAt: asOf };
 }

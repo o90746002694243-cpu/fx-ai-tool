@@ -7,6 +7,7 @@ exports.handler = async event => {
   try {
     const pairs = ["USD/JPY","AUD/JPY","NZD/JPY","CAD/JPY","EUR/JPY"];
     const results = await Promise.all(pairs.map(pair=>store.get("market-"+pair.replace("/","-"),{type:"json"})));
+    const errors = await Promise.all(pairs.map(pair => store.get("market-error-" + pair.replace("/", "-"), {type:"json"})));
     const current = results.filter(Boolean).map(result => ({
       ...result,
       // Read the authoritative tracker, rather than a cached market snapshot.
@@ -15,7 +16,7 @@ exports.handler = async event => {
       pendingSince: tracker.openSignals.find(s => s.pair === result.pair)?.createdAt || null,
       strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null
     }));
-    return {statusCode:200,headers,body:JSON.stringify({ok:true,results:current})};
+    return {statusCode:200,headers,body:JSON.stringify({ok:true,results:current,errors:errors.filter(Boolean)})};
   } catch(error) {
     return {statusCode:500,headers,body:JSON.stringify({ok:false,error:"監視状況の取得に失敗しました。"})};
   }

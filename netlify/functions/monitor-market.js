@@ -8,6 +8,7 @@ const {
   saveTracker
 } = require("./trade-tracker");
 
+const { qualifies, estimateProbability, settleCandidates, trackCandidate } = require("./probability");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -153,6 +154,15 @@ const {
     const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
+    settleCandidates(tracker, pair, candles);
+    const probability = estimateProbability(tracker, pair, analysis);
+    const candidateEligible = qualifies(analysis);
+    trackCandidate(tracker, pair, analysis);
+    // Transition safely: only use the 60% empirical threshold with enough
+    // completed comparable hypothetical trades; otherwise retain old rules.
+    const probabilityReady = probability.isValidated;
+    const probabilityPassed = probabilityReady && probability.empiricalWinRate >= 60;
+    const signalEligible = probabilityReady ? candidateEligible && probabilityPassed : analysis.eligible;
     // Persist settlements before attempting a new push. A later API failure
     // must not discard completed trade results from an earlier pair.
     if (!await saveTracker(tradeStore, tracker)) {
@@ -161,7 +171,7 @@ const {
     const alreadyTracking = hasOpenSignal(tracker, pair);
     const importantEvent = findImportantEvent(importantEvents, pair);
     const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
-    const shouldNotify = analysis.eligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    const shouldNotify = signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
 
@@ -182,6 +192,15 @@ const actualWinRateText =
   formatActualWinRate(tracker, pair);
       
     let notificationSent = false;
+    let notificationErrorText = null;
+    const skipReasons = [];
+    if (!signalEligible) skipReasons.push(probabilityReady
+      ? "類似条件の実績勝率が60%未満、または安全条件未達"
+      : "過去実績30件未満のため従来の90点ルールで検証中");
+    if (stale) skipReasons.push("ローソク足データが古い");
+    if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
+    if (importantEvent) skipReasons.push("重要経済指標の前後");
+    if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !isDuplicate) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
@@ -210,7 +229,8 @@ const actualWinRateText =
               contents: {
   en:
     pair + " " + direction + "候補\n" +
-    "判定スコア：" + score + "点\n" +
+    "従来の分析スコア：" + score + "点\n" +
+    "類似条件の実績勝率：" + (probability.empiricalWinRate ?? "検証中") + "%（" + probability.sampleSize + "件）\n" +
     "新ルール実績: " + actualWinRateText + "\n" +
     "過去参考: " + history.text + "\n" +
     "1時間足：" + higherTimeframes.h1 + "／4時間足：" + higherTimeframes.h4 + "\n" +
@@ -268,10 +288,8 @@ const actualWinRateText =
         }
         
       } catch (notificationError) {
-        console.error(
-          "OneSignal notification error:",
-          notificationError
-        );
+        notificationErrorText = String(notificationError.message || notificationError).slice(0, 250);
+        console.error("OneSignal notification error:", notificationError);
       }
     }
     console.log("FX monitor result:", {
@@ -280,8 +298,11 @@ const actualWinRateText =
       currentPrice,
       direction,
       score,
+      probability,
       shouldNotify,
       notificationSent,
+      skipReasons,
+      notificationErrorText,
       eligible: analysis.eligible,
       higherAligned: analysis.higherAligned,
       higherTimeframes,
@@ -319,7 +340,8 @@ const actualWinRateText =
         direction,
 
         score,
-
+        probability,
+        notificationMode: probabilityReady ? "類似条件の実績60%基準（試験運用）" : "従来ルール（実績収集中）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
         actualWinRate: actualWinRateText,
@@ -364,10 +386,12 @@ const actualWinRateText =
         }),
         higherTimeframes,
         stale,
-        note: "通知条件はスコア90以上・上位足一致等。勝率80%の保証ではありません。",
+        note: probabilityReady ? "類似条件の観測勝率60%以上を採用。将来の勝率を保証しません。" : "実績が30件未満のため従来の90点ルールで通知判定。検証を継続します。",
 
         shouldNotify,
         notificationSent,
+        notificationStatus: notificationSent ? "送信受理" : notificationErrorText ? "通知送信失敗" : shouldNotify ? "送信未完了" : "条件未達",
+        notificationReason: notificationErrorText || skipReasons.join("／") || (notificationSent ? "送信先が受理" : "通知送信を確認できません"),
 
         entryPrice:
           Number(entryPrice.toFixed(3)),
@@ -412,7 +436,13 @@ const actualWinRateText =
     });
       } catch (pairError) {
         console.error("FX pair monitor failed:", pair, pairError);
-        pairErrors.push({pair, error: String(pairError.message || pairError)});
+        const safeError = String(pairError.message || pairError).replace(/apikey=[^&\s]+/gi, "apikey=[REDACTED]").slice(0, 250);
+        pairErrors.push({pair, error: safeError});
+        if (tradeStore) {
+          try { await tradeStore.setJSON("market-error-" + pair.replace("/", "-"), {
+            pair, error: safeError, checkedAt: new Date().toISOString()
+          }); } catch (storeError) { console.error("Could not save pair diagnostic", pair, storeError); }
+        }
       }
 }
 
@@ -422,6 +452,7 @@ if (tradeStore) {
     await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
       ...value, checkedAt: new Date().toISOString()
     });
+    await tradeStore.delete("market-error-" + value.pair.replace("/", "-"));
   }
 }
 const tradeSaved = await saveTracker(tradeStore, tracker);

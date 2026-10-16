@@ -191,7 +191,7 @@ button:disabled{
     <section aria-label="自動監視と検証結果">
       <h2>自動監視・勝率検証</h2>
       <p>15分足の候補を、確定した1時間足・4時間足の方向で確認します。</p>
-      <p>通知条件：スコア90点以上・上位足一致・指標回避など。スコアは勝率ではありません。</p>
+      <p>通知条件：類似条件の検証データ30件未満は従来の90点ルール、30件以上は観測勝率60%以上（安全フィルター併用）。観測勝率は将来の勝率を保証しません。</p>
       <div id="marketSummary" aria-live="polite">監視状況を読み込み中…</div>
       <p style="font-size:13px;line-height:1.6">過去検証は仮想約定の参考値です。スプレッド・滑り・過去の指標回避は未反映。
       TPとSLの両方に到達した足・6時間で未決着の取引も分母に含めます。30件未満は検証中です。
@@ -1153,8 +1153,17 @@ async function monitorMarket() {
         "判定待ち：" + (result.pendingCount ?? 0) + "件（通知後、最大6時間で結果判定）\n" +
         "過去参考：" + (bt.text || "未検証") + "\n" +
         "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
+        "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
+        "類似条件の実績：" + (result.probability?.empiricalWinRate ?? "検証中") + "%／" + (result.probability?.sampleSize ?? 0) + "件\n" +
+        "通知判定：" + (result.notificationStatus || "詳細未記録（更新待ち）") + "　" + (result.notificationReason || "") + "\n" +
         "更新：" + new Date(result.checkedAt).toLocaleString("ja-JP") +
         (old || result.stale ? "（データが古いため確認が必要）" : "");
+      box.appendChild(row);
+    }
+    for (const problem of data.errors || []) {
+      const row = document.createElement("div");
+      row.style.cssText = "padding:12px 0;white-space:pre-wrap;color:#ffcbac";
+      row.textContent = "データ取得エラー：" + problem.pair + "\n" + problem.error + "\n発生：" + new Date(problem.checkedAt).toLocaleString("ja-JP");
       box.appendChild(row);
     }
   } catch (error) { box.textContent = "監視状況：" + error.message; }
