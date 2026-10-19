@@ -50,7 +50,8 @@ test('historical replay produces coherent counts and disclosures',()=>{
   assert.equal(result.signals,result.total+result.unresolved);
   assert.equal(result.total,result.wins+result.losses+result.ambiguous+result.expired);
   assert(result.assumptions.includes('スプレッド'));
-  assert.equal(backtest(c.slice(0,100)).signals,0);
+  const short=backtest(c.slice(0,100));
+  assert.equal(short.signals,short.total+short.unresolved);
 });
 test('new strategy stats stay separate and old records survive',()=>{
   const trackerModule=require('../netlify/functions/trade-tracker');
@@ -68,7 +69,7 @@ test('monitor builds saved read-only summaries without contacting push on stale 
   const previous=require.cache[modulePath];
   const stored=[];
   require.cache[modulePath]={exports:{
-    loadTracker:async()=>({store:{setJSON:async(k,v)=>stored.push([k,v])},tracker:{openSignals:[],stats:{}}}),
+    loadTracker:async()=>({store:{setJSON:async(k,v)=>stored.push([k,v]),delete:async()=>{}},tracker:{openSignals:[],stats:{}}}),
     settlePairSignals:()=>{},hasOpenSignal:()=>false,addSignal:()=>{},formatActualWinRate:()=> '検証中（0件）',saveTracker:async()=>true
   }};
   const originalFetch=global.fetch, apiKey=process.env.TWELVE_DATA_API_KEY;
@@ -83,8 +84,9 @@ test('monitor builds saved read-only summaries without contacting push on stale 
     const result=await require('../netlify/functions/monitor-market').handler({});
     assert.equal(result.statusCode,200);
     assert.equal(stored.length,5);
-    assert.equal(calls.filter(x=>x.includes('time_series')).length,5);
-    assert(calls.filter(x=>x.includes('time_series')).every(x=>x.includes('outputsize=5000')&&x.includes('timezone=UTC')));
+    assert.equal(calls.filter(x=>x.includes('time_series')).length,10);
+    assert.equal(calls.filter(x=>x.includes('outputsize=5000')&&x.includes('timezone=UTC')).length,5);
+    assert.equal(calls.filter(x=>x.includes('interval=5min')&&x.includes('outputsize=35')).length,5);
     assert(stored.every(([,value])=>value.backtest&&value.higherTimeframes&&!value.shouldNotify));
     assert(!calls.some(x=>x.includes('onesignal')));
   } finally {

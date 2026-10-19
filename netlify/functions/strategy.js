@@ -376,6 +376,7 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
    const chartPattern = detectChartPattern(candles);
   const asOf = latest.endTime;
   const higherTimeframes = {
+    m5: higher && Array.isArray(higher.m5) ? trend(higher.m5, asOf) : "未取得",
     h1: trend(higher ? higher.h1 : aggregate(candles,1), asOf),
     h4: trend(higher ? higher.h4 : aggregate(candles,4), asOf)
   };
@@ -385,7 +386,6 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   direction !== "見送り" &&
   !isRsiExtreme &&
   !isSharpMove &&
-  higherAligned &&
   safeRange > 0 &&
   !isRangeTooSmall &&
   !isWeakTrend &&

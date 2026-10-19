@@ -1,4 +1,4 @@
-const { evaluate, normalizeCandles, backtest, STRATEGY_VERSION } = require("./strategy");
+const { evaluate, normalizeCandles, aggregate, backtest, STRATEGY_VERSION } = require("./strategy");
 const {
   loadTracker,
   settlePairSignals,
@@ -150,14 +150,39 @@ const {
     if (candles.length < 21) throw new Error("確定した相場データが不足しています。");
     const latest = candles[candles.length - 1];
     const history = backtest(candles, pair);
-    const analysis = evaluate(candles, null, pair);
+    // Five-minute candles are reference-only. Failure never prevents 15-minute analysis.
+    let fiveMinuteBars = [];
+    try {
+      const fiveMinUrl = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(pair)}&interval=5min&outputsize=35&timezone=UTC&apikey=${apiKey}`;
+      const fiveResponse = await fetch(fiveMinUrl, {signal: AbortSignal.timeout(8000)});
+      const fiveData = await fiveResponse.json();
+      if (fiveResponse.ok && fiveData.status !== "error" && Array.isArray(fiveData.values)) {
+        const bucket = new Map();
+        for (const bar of fiveData.values) {
+          const ms = Date.parse(String(bar.datetime).replace(" ", "T") + "Z");
+          const endTime = ms + 5 * 60 * 1000;
+          const close = Number(bar.close);
+          if (Number.isFinite(ms) && endTime <= Date.now() && Number.isFinite(close) && close > 0) {
+            bucket.set(ms, {time: ms, endTime, close});
+          }
+        }
+        fiveMinuteBars = [...bucket.values()].sort((a,b)=>a.time-b.time);
+      }
+    } catch (err) {
+      console.warn("Optional M5 reference unavailable:", String(err.message || err));
+    }
+    const analysis = evaluate(candles, {m5: fiveMinuteBars, h1: aggregate(candles, 1), h4: aggregate(candles, 4)}, pair);
     const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
     settleCandidates(tracker, pair, candles);
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);
-    trackCandidate(tracker, pair, analysis);
+    // Never create hypothetical trades from stale feeds: they would pollute measured rates.
+    const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
+    if (!stale && latest.endTime <= Date.now() + 60 * 1000) {
+      trackCandidate(tracker, pair, analysis);
+    }
     // Transition safely: only use the 60% empirical threshold with enough
     // completed comparable hypothetical trades; otherwise retain old rules.
     const probabilityReady = probability.isValidated;
@@ -170,7 +195,6 @@ const {
     }
     const alreadyTracking = hasOpenSignal(tracker, pair);
     const importantEvent = findImportantEvent(importantEvents, pair);
-    const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
     const shouldNotify = signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
@@ -194,10 +218,21 @@ const actualWinRateText =
     let notificationSent = false;
     let notificationErrorText = null;
     const skipReasons = [];
-    if (!signalEligible) skipReasons.push(probabilityReady
-      ? "類似条件の実績勝率が60%未満、または安全条件未達"
-      : "過去実績30件未満のため従来の90点ルールで検証中");
-    if (stale) skipReasons.push("ローソク足データが古い");
+    if (!signalEligible) {
+      if (!probabilityReady) skipReasons.push("類似条件の結果" + probability.sampleSize + "/" + probability.requiredSamples + "件（従来条件で判定）");
+      else if (!probabilityPassed) skipReasons.push("類似条件の観測勝率60%未満");
+      if (score < (probabilityReady ? 70 : 90)) skipReasons.push("スコア不足：" + score + "点");
+      if (direction === "見送り") skipReasons.push("売買方向が不明");
+      if (analysis.isRsiExtreme) skipReasons.push("RSI極端値");
+      if (analysis.isSharpMove) skipReasons.push("急変動");
+      if (analysis.isRangeTooSmall) skipReasons.push("値幅不足");
+      if (analysis.isWeakTrend) skipReasons.push("ADXトレンド不足");
+      if (analysis.isCandleOpposed || analysis.candleSignal === "十字線") skipReasons.push("ローソク足条件未達");
+      if (!(analysis.netRewardPips > 0 && riskReward >= 1.2)) skipReasons.push("コスト控除後の利益・RR不足");
+      if (!probabilityReady && !(Math.abs(takeProfit-entryPrice) >= analysis.spreadPips * 0.01 * 3)) skipReasons.push("利確幅がスプレッドの3倍未満");
+      if (!skipReasons.length) skipReasons.push("その他の通知条件未達");
+    }
+    if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
@@ -233,7 +268,7 @@ const actualWinRateText =
     "類似条件の実績勝率：" + (probability.empiricalWinRate ?? "検証中") + "%（" + probability.sampleSize + "件）\n" +
     "新ルール実績: " + actualWinRateText + "\n" +
     "過去参考: " + history.text + "\n" +
-    "1時間足：" + higherTimeframes.h1 + "／4時間足：" + higherTimeframes.h4 + "\n" +
+    "5分足（参考）：" + higherTimeframes.m5 + "／1時間足：" + higherTimeframes.h1 + "／4時間足：" + higherTimeframes.h4 + "\n" +
     "エントリー：" + entryPrice.toFixed(3) + "\n" +
     "利確：" + takeProfit.toFixed(3) + "\n" +
     "損切り：" + stopLoss.toFixed(3) + "\n" +
@@ -249,6 +284,7 @@ const actualWinRateText =
     score: String(score),
     winRate: actualWinRateText,
     backtest: history.text,
+    m5: higherTimeframes.m5,
     h1: higherTimeframes.h1,
     h4: higherTimeframes.h4,
     entry: entryPrice.toFixed(3),
@@ -386,7 +422,7 @@ const actualWinRateText =
         }),
         higherTimeframes,
         stale,
-        note: probabilityReady ? "類似条件の観測勝率60%以上を採用。将来の勝率を保証しません。" : "実績が30件未満のため従来の90点ルールで通知判定。検証を継続します。",
+        note: probabilityReady ? "類似条件の観測勝率60%以上を採用。将来の勝率を保証しません。" : "実績が30件未満のため90点ルールで通知判定（H1/H4一致は不要）。検証を継続します。",
 
         shouldNotify,
         notificationSent,

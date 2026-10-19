@@ -10,8 +10,7 @@ function qualifies(a) {
     a.riskReward >= 1.2 && a.score >= 70;
 }
 function matchGroup(a) {
-  return a.direction + "|" + (a.higherAligned ? "aligned" : "mixed") + "|" +
-    (a.score >= 90 ? "high" : a.score >= 80 ? "medium" : "low");
+  return a.direction + "|" + (a.score >= 90 ? "high" : a.score >= 80 ? "medium" : "low");
 }
 function wilsonLower(wins, n, z=1.645) {
   if (!n) return 0;
@@ -20,8 +19,12 @@ function wilsonLower(wins, n, z=1.645) {
 }
 function estimateProbability(tracker, pair, a) {
   const key=matchGroup(a);
-  const s=tracker.candidateStats?.[pair]?.[key] || {};
-  const wins=s.wins || 0, n=wins+(s.losses||0)+(s.ambiguous||0)+(s.expired||0);
+  // Merge legacy H1/H4-split results without requiring their agreement.
+  const all=tracker.candidateStats?.[pair] || {};
+  const suffix=key.slice(a.direction.length);
+  const buckets=[key,a.direction+"|aligned"+suffix,a.direction+"|mixed"+suffix];
+  const sums=buckets.reduce((acc,k)=>{const s=all[k]||{}; for(const x of ["wins","losses","ambiguous","expired"]) acc[x]+=(s[x]||0);return acc;},{wins:0,losses:0,ambiguous:0,expired:0});
+  const wins=sums.wins, n=wins+sums.losses+sums.ambiguous+sums.expired;
   return { empiricalWinRate: n ? Math.round(wins/n*1000)/10 : null,
     lowerBound90: n ? Math.round(wilsonLower(wins,n)*1000)/10 : null,
     sampleSize:n, requiredSamples:MIN_COMPARABLE, isValidated:n>=MIN_COMPARABLE,
