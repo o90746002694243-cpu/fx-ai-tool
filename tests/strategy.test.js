@@ -84,9 +84,9 @@ test('monitor builds saved read-only summaries without contacting push on stale 
     const result=await require('../netlify/functions/monitor-market').handler({});
     assert.equal(result.statusCode,200);
     assert.equal(stored.length,5);
-    assert.equal(calls.filter(x=>x.includes('time_series')).length,10);
+    assert.equal(calls.filter(x=>x.includes('time_series')).length,6);
     assert.equal(calls.filter(x=>x.includes('outputsize=5000')&&x.includes('timezone=UTC')).length,5);
-    assert.equal(calls.filter(x=>x.includes('interval=5min')&&x.includes('outputsize=35')).length,5);
+    assert.equal(calls.filter(x=>x.includes('interval=5min')&&x.includes('outputsize=35')).length,1);
     assert(stored.every(([,value])=>value.backtest&&value.higherTimeframes&&!value.shouldNotify));
     assert(!calls.some(x=>x.includes('onesignal')));
   } finally {

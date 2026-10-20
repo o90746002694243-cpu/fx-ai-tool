@@ -5,7 +5,7 @@ const { evaluate, outcome } = require("./strategy");
 const MIN_COMPARABLE = 30;
 function qualifies(a) {
   return a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
-    !a.isRangeTooSmall && !a.isWeakTrend && !a.isCandleOpposed &&
+    !a.isRangeTooSmall && !a.isCandleOpposed &&
     a.candleSignal !== "十字線" && a.netRewardPips > 0 &&
     a.riskReward >= 1.2 && a.score >= 70;
 }
@@ -29,6 +29,18 @@ function estimateProbability(tracker, pair, a) {
     lowerBound90: n ? Math.round(wilsonLower(wins,n)*1000)/10 : null,
     sampleSize:n, requiredSamples:MIN_COMPARABLE, isValidated:n>=MIN_COMPARABLE,
     group:key, note:"実績の観測勝率（予測勝率の保証ではありません）。90%片側信頼下限は参考値。" };
+}
+// A provisional screening index, NOT a calibrated forecast probability.
+// It bridges the first 30 completed comparable hypothetical cases without
+// inventing wins when the history is empty. Prior is deliberately disclosed.
+function provisional60Gate(analysis, empirical) {
+  const score = Number(analysis.score);
+  const prior = Number.isFinite(score) ? Math.max(0, Math.min(100, 60 + (score - 70) * 0.5)) : 0;
+  const n = empirical.sampleSize;
+  const rate = n ? (30 * prior + n * empirical.empiricalWinRate) / (30 + n) : prior;
+  return { estimatedScore: Math.round(rate * 10) / 10, passes: rate >= 60,
+    status: n >= MIN_COMPARABLE ? "実績併用・暫定指数" : "30件未満・暫定指数",
+    note: "スコア換算の暫定60%指数。校正済み予測勝率ではなく、実勝率60%を保証しません。" };
 }
 function settleCandidates(tracker,pair,candles,now=Date.now()) {
   tracker.openCandidates ||= [];
@@ -59,4 +71,4 @@ function trackCandidate(tracker,pair,a) {
     candleTime:a.candleTime});
   return true;
 }
-module.exports={MIN_COMPARABLE,qualifies,matchGroup,estimateProbability,settleCandidates,trackCandidate};
+module.exports={MIN_COMPARABLE,qualifies,matchGroup,estimateProbability,provisional60Gate,settleCandidates,trackCandidate};
