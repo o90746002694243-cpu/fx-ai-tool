@@ -16,7 +16,11 @@ exports.handler = async event => {
       pendingSince: tracker.openSignals.find(s => s.pair === result.pair)?.createdAt || null,
       strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null
     }));
-    return {statusCode:200,headers,body:JSON.stringify({ok:true,results:current,errors:errors.filter(Boolean)})};
+    const latestErrors = errors.filter(Boolean).filter(error => {
+      const previous = results.find(r => r && r.pair === error.pair);
+      return !previous || Date.parse(error.checkedAt) >= Date.parse(previous.checkedAt);
+    });
+    return {statusCode:200,headers,body:JSON.stringify({ok:true,results:current,errors:latestErrors})};
   } catch(error) {
     return {statusCode:500,headers,body:JSON.stringify({ok:false,error:"監視状況の取得に失敗しました。"})};
   }

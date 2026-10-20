@@ -1141,7 +1141,9 @@ async function monitorMarket() {
     if (!response.ok || !data.ok) throw new Error(data.error || "取得失敗");
     box.replaceChildren();
     if (!data.results.length) { box.textContent = "初回の定期監視結果を待っています。"; return; }
+    const latestErrorPairs = new Set((data.errors || []).map(e => e.pair));
     for (const result of data.results) {
+      if (latestErrorPairs.has(result.pair)) continue; // Newer fetch errors supersede old successful checks.
       const row = document.createElement("div");
       row.style.cssText = "padding:14px 0;border-bottom:1px solid #4e6787;white-space:pre-wrap;line-height:1.7";
       const bt = result.backtest || {};
@@ -1156,7 +1158,9 @@ async function monitorMarket() {
         "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
         "暫定60%指数：" + (result.provisional?.estimatedScore ?? "計算前") + "（実勝率ではありません）\n" +
         "類似条件の実績：" + (result.probability?.empiricalWinRate ?? "検証中") + "%／" + (result.probability?.sampleSize ?? 0) + "件\n" +
-        "通知判定：" + (result.notificationStatus || "詳細未記録（更新待ち）") + "　" + (result.notificationReason || "") + "\n" +
+        "通知判定：" + (result.notificationStatus || "詳細未記録（更新待ち）") + "\n" +
+        "見送り理由：" + ((result.skipReasons || []).join("／") || result.notificationReason || "なし") + "\n" +
+        "通知処理：" + (result.diagnostic ? (result.diagnostic.pushAttempted ? (result.diagnostic.pushAccepted ? "OneSignal受理" : "送信試行・未受理") : "送信条件未達") : "更新待ち") + "\n" +
         "更新：" + new Date(result.checkedAt).toLocaleString("ja-JP") +
         (old || result.stale ? "（データが古いため確認が必要）" : "");
       box.appendChild(row);
@@ -1164,7 +1168,7 @@ async function monitorMarket() {
     for (const problem of data.errors || []) {
       const row = document.createElement("div");
       row.style.cssText = "padding:12px 0;white-space:pre-wrap;color:#ffcbac";
-      row.textContent = "データ取得エラー：" + problem.pair + "\n" + problem.error + "\n発生：" + new Date(problem.checkedAt).toLocaleString("ja-JP");
+      row.textContent = "現在の監視エラー（通知判定できません）：" + problem.pair + "\n" + problem.error + "\n発生：" + new Date(problem.checkedAt).toLocaleString("ja-JP");
       box.appendChild(row);
     }
   } catch (error) { box.textContent = "監視状況：" + error.message; }

@@ -9,6 +9,7 @@ const {
 } = require("./trade-tracker");
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
+const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -180,6 +181,7 @@ const {
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
     settleCandidates(tracker, pair, candles);
+    settleShadows(tracker, pair, candles);
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);
     const provisional = provisional60Gate(analysis, probability);
@@ -193,6 +195,8 @@ const {
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
     const signalEligible = candidateEligible && probabilityPassed;
+    const shadowRecorded = trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
+    const shadow = shadowSummary(tracker, pair);
     // Persist settlements before attempting a new push. A later API failure
     // must not discard completed trade results from an earlier pair.
     if (!await saveTracker(tradeStore, tracker)) {
@@ -240,6 +244,7 @@ const actualWinRateText =
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
+    if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
     if (shouldNotify && !isDuplicate) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
@@ -339,7 +344,7 @@ const actualWinRateText =
       currentPrice,
       direction,
       score,
-      probability, provisional,
+      probability, provisional, shadowRecorded, shadow,
       shouldNotify,
       notificationSent,
       skipReasons,
@@ -383,6 +388,7 @@ const actualWinRateText =
         score,
         probability,
         provisional,
+        shadowRecorded, shadow,
         notificationMode: "暫定60%指数ルール（各通貨30件まで検証）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
@@ -434,6 +440,14 @@ const actualWinRateText =
         notificationSent,
         notificationStatus: notificationSent ? "送信受理" : notificationErrorText ? "通知送信失敗" : shouldNotify ? "送信未完了" : "条件未達",
         notificationReason: notificationErrorText || skipReasons.join("／") || (notificationSent ? "送信先が受理" : "通知送信を確認できません"),
+        skipReasons,
+        diagnostic: {
+          candidateEligible, probabilityPassed, eligible: signalEligible,
+          dataFresh: !stale, noOpenSignal: !alreadyTracking,
+          noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
+          pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
+          candleTime: latest.datetime, recordedAt: new Date().toISOString()
+        },
 
         entryPrice:
           Number(entryPrice.toFixed(3)),
