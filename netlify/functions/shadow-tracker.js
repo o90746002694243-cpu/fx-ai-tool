@@ -57,7 +57,15 @@ function settleShadows(tracker, pair, candles, now = Date.now()) {
 function shadowSummary(tracker,pair) {
   ensure(tracker);
   const pairStats=tracker.shadowStats[pair] || {};
-  return {open: tracker.shadowOpen.filter(s=>s.pair===pair).length,
+  const openTrades = tracker.shadowOpen.filter(s=>s.pair===pair).map(s=>({
+    direction:s.direction, entryPrice:s.entryPrice, takeProfit:s.takeProfit,
+    stopLoss:s.stopLoss, entryAt:s.entryAt, category:s.category
+  }));
+  const recentTrades = tracker.shadowHistory.filter(s=>s.pair===pair).slice(-5).reverse().map(s=>({
+    direction:s.direction, entryPrice:s.entryPrice, result:s.result,
+    entryAt:s.entryAt, settledAt:s.settledAt, category:s.category
+  }));
+  return {open:openTrades.length, openTrades, recentTrades,
     categories:Object.fromEntries(CATEGORIES.map(category=>{
       const b=pairStats[category] || {wins:0,losses:0,ambiguous:0,expired:0};
       const decided=b.wins+b.losses;

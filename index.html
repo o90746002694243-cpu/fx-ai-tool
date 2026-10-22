@@ -1155,6 +1155,25 @@ async function monitorMarket() {
         "判定待ち：" + (result.pendingCount ?? 0) + "件（通知後、最大6時間で結果判定）\n" +
         "過去参考：" + (bt.text || "未検証") + "\n" +
         "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
+        "仮想トレード（見送り検証）：" + (result.shadow ? (() => {
+          const c = result.shadow.categories || {};
+          const label = (name, obj) => name + " 勝" + (obj?.wins || 0) + "／負" + (obj?.losses || 0) +
+            "／曖昧" + (obj?.ambiguous || 0) + "／期限切れ" + (obj?.expired || 0) +
+            "（判定済み勝率 " + (obj?.winRate == null ? "未算出" : obj.winRate + "%") + "）";
+          const dir = v => v === "買い" ? "▲ 買い" : v === "売り" ? "▼ 売り" : "不明";
+          const category = v => v === "below60" ? "60%指数未満" : "その他条件";
+          const fmt = n => typeof n === "number" && Number.isFinite(n) ? n.toFixed(3) : "不明";
+          const outcome = v => ({wins:"勝ち",losses:"負け",ambiguous:"同時到達（判定保留）",expired:"期限切れ"})[v] || "不明";
+          const open = (result.shadow.openTrades || []).map(t =>
+            "  " + dir(t.direction) + " エントリー " + fmt(t.entryPrice) +
+            "／利確 " + fmt(t.takeProfit) + "／損切 " + fmt(t.stopLoss) + "（" + category(t.category) + "）");
+          const history = (result.shadow.recentTrades || []).map(t =>
+            "  " + dir(t.direction) + " " + outcome(t.result) + "／エントリー " + fmt(t.entryPrice) + "（" + category(t.category) + "）");
+          return "未決済" + (result.shadow.open || 0) + "件\n" +
+            "仮想エントリー（買い・売り）：\n" + (open.length ? open.join("\n") : "  なし") + "\n" +
+            "直近の決済（最大5件）：\n" + (history.length ? history.join("\n") : "  なし") + "\n" +
+            label("60%指数未満", c.below60) + "\n" + label("その他条件", c.otherFilter);
+        })() : "データ収集中") + "\n" +
         "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
         "暫定60%指数：" + (result.provisional?.estimatedScore ?? "計算前") + "（実勝率ではありません）\n" +
         "類似条件の実績：" + (result.probability?.empiricalWinRate ?? "検証中") + "%／" + (result.probability?.sampleSize ?? 0) + "件\n" +

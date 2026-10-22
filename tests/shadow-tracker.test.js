@@ -30,3 +30,15 @@ test('same candle both TP and SL is ambiguous not a win',()=>{
  assert.equal(shadowSummary(t,pair).categories.below60.ambiguous,1);
  assert.equal(shadowSummary(t,pair).categories.below60.winRate,null);
 });
+
+test('summary exposes buy/sell direction on open and settled trades',()=>{
+ const t={};
+ const sell={direction:'売り',entryPrice:100,takeProfit:99.85,stopLoss:100.1,riskReward:1.5,score:65};
+ assert.equal(trackShadow(t,pair,sell,{passes:false,estimatedScore:55},false,bar,start+1),true);
+ assert.equal(shadowSummary(t,pair).openTrades[0].direction,'売り');
+ settleShadows(t,pair,[{time:start,endTime:start+900000,high:100.0,low:99.8}],start+900000);
+ const summary=shadowSummary(t,pair);
+ assert.equal(summary.openTrades.length,0);
+ assert.equal(summary.recentTrades[0].direction,'売り');
+ assert.equal(summary.recentTrades[0].result,'wins');
+});

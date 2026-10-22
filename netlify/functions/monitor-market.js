@@ -245,7 +245,7 @@ const actualWinRateText =
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
-    if (shouldNotify && !isDuplicate) {
+    if (shouldNotify && !isDuplicate && oneSignalKey) {
       try {
         console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
         const notificationResponse = await fetch(
@@ -438,7 +438,7 @@ const actualWinRateText =
 
         shouldNotify,
         notificationSent,
-        notificationStatus: notificationSent ? "送信受理" : notificationErrorText ? "通知送信失敗" : shouldNotify ? "送信未完了" : "条件未達",
+        notificationStatus: notificationSent ? "送信受理" : notificationErrorText ? "通知送信失敗" : shouldNotify && !oneSignalKey ? "OneSignal設定不足" : shouldNotify ? "送信未完了" : "条件未達",
         notificationReason: notificationErrorText || skipReasons.join("／") || (notificationSent ? "送信先が受理" : "通知送信を確認できません"),
         skipReasons,
         diagnostic: {
