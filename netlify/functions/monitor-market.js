@@ -10,6 +10,7 @@ const {
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
 const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
+const { notificationId } = require("./notification-id");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -258,9 +259,7 @@ const actualWinRateText =
            },
            body: JSON.stringify({
               app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
-              idempotency_key: require("node:crypto").createHash("sha256")
-                .update([STRATEGY_VERSION, pair, direction, latest.datetime].join("|"))
-                .digest("hex"),
+              idempotency_key: notificationId(STRATEGY_VERSION, pair, direction, latest.datetime),
               target_channel: "push",
               include_subscription_ids: [
   "f7a8344c-34f9-44f8-8bb5-03f97a2fd645",

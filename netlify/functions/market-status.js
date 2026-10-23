@@ -14,7 +14,10 @@ exports.handler = async event => {
       actualWinRate: formatActualWinRate(tracker, result.pair),
       pendingCount: tracker.openSignals.filter(s => s.pair === result.pair).length,
       pendingSince: tracker.openSignals.find(s => s.pair === result.pair)?.createdAt || null,
-      strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null
+      strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null,
+      // Current paper-trade position or latest settled one; never mislabel a candidate as recorded.
+      paperTrade: (tracker.shadowOpen || []).filter(s => s.pair === result.pair).slice(-1)[0] ||
+        (tracker.shadowHistory || []).filter(s => s.pair === result.pair).slice(-1)[0] || null
     }));
     const latestErrors = errors.filter(Boolean).filter(error => {
       const previous = results.find(r => r && r.pair === error.pair);

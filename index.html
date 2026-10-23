@@ -1161,6 +1161,19 @@ async function monitorMarket() {
         "1時間足：" + (higher.h1 || "不足") + " ／4時間足：" + (higher.h4 || "不足") + "\n" +
         "新ルール実績：" + (result.actualWinRate || "検証中") + "\n" +
         "判定待ち：" + (result.pendingCount ?? 0) + "件（通知後、最大6時間で結果判定）\n" +
+        "\n【架空予想・仮想トレード】\n" +
+        (result.paperTrade ?
+          "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +
+          "方向：" + result.paperTrade.direction + "\n" +
+          "エントリー：" + Number(result.paperTrade.entryPrice).toFixed(3) + "\n" +
+          "利確：" + Number(result.paperTrade.takeProfit).toFixed(3) + "\n" +
+          "損切り：" + Number(result.paperTrade.stopLoss).toFixed(3) + "\n" :
+          "仮想記録なし（現在の分析候補・未記録）\n" +
+          "方向：" + (['買い','売り'].includes(result.direction) ? result.direction : "未確定") + "\n" +
+          "エントリー：" + (Number.isFinite(Number(result.entryPrice)) ? Number(result.entryPrice).toFixed(3) : "-") + "\n" +
+          "利確：" + (Number.isFinite(Number(result.takeProfit)) ? Number(result.takeProfit).toFixed(3) : "-") + "\n" +
+          "損切り：" + (Number.isFinite(Number(result.stopLoss)) ? Number(result.stopLoss).toFixed(3) : "-") + "\n") +
+        "\n" +
         "過去参考：" + (bt.text || "未検証") + "\n" +
         "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
         "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
