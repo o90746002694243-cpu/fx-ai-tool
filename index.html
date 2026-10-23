@@ -1145,8 +1145,7 @@ async function monitorMarket() {
       const warning = document.createElement("div");
       warning.style.cssText = "padding:12px 0;white-space:pre-wrap;color:#ffcbac";
       warning.textContent = "監視状況：" + health.pair + "／" + health.message +
-        (health.checkedAt ? "
-最終更新：" + new Date(health.checkedAt).toLocaleString("ja-JP") : "");
+        (health.checkedAt ? "\n最終更新：" + new Date(health.checkedAt).toLocaleString("ja-JP") : "");
       box.appendChild(warning);
     }
     if (!data.results.length) { box.textContent = "初回の定期監視結果を待っています。"; return; }
