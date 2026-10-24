@@ -1,3 +1,4 @@
+const { crossedMarketClosure } = require("./weekend-guard");
 "use strict";
 // A historical hit rate is not a calibrated forward-looking probability.
 // Keep it labelled as an empirical estimate, with a confidence lower bound.
@@ -52,11 +53,15 @@ function settleCandidates(tracker,pair,candles,now=Date.now()) {
     // Do not evaluate the signal-forming candle against its own TP/SL.
     const newer=candles.filter(c => c.time >= s.entryAt);
     let result=null;
-    for (const c of newer) {result=outcome(s,c);if(result)break;}
+    for (const c of newer) {
+      if(crossedMarketClosure(Number(s.entryAt),Number(c.time))) {result="weekendExcluded";break;}
+      result=outcome(s,c);if(result)break;
+    }
+    if(!result && crossedMarketClosure(Number(s.entryAt),now)) result="weekendExcluded";
     if (!result && now>=s.entryAt+6*60*60*1000) result="expired";
     if (!result) {rest.push(s);continue;}
     const b=tracker.candidateStats[pair][s.group] ||= {wins:0,losses:0,ambiguous:0,expired:0};
-    b[result]++;
+    b[result]=(b[result]||0)+1;
   }
   tracker.openCandidates=rest;
 }

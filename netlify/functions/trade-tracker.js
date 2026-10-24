@@ -1,4 +1,5 @@
 const { STRATEGY_VERSION, outcome, formatSummary } = require("./strategy");
+const { crossedMarketClosure } = require("./weekend-guard");
 const STORE_NAME = "fx-trade-results";
 const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
@@ -125,12 +126,14 @@ function settlePairSignals(
   );
       let result = null;
       for (const candle of candles) {
+        if (crossedMarketClosure(Number(signal.entryAt), Number(candle.time))) { result = "weekendExcluded"; break; }
         result = outcome(signal, candle);
         if (result) break;
       }
+      if (!result && crossedMarketClosure(Number(signal.entryAt), now)) result = "weekendExcluded";
       if (!result && now - signal.entryAt >= EXPIRY_MS) result = "expired";
             if (result) {
-        currentStats[result] += 1;
+        currentStats[result] = (currentStats[result] || 0) + 1;
 
         const pattern = signal.chartPattern;
 
@@ -199,6 +202,11 @@ const versionStats =
     let resolved = false;
 
     for (const candle of newerCandles) {
+      if (crossedMarketClosure(Number(signal.entryAt || signal.createdAt), Number(candle.time))) {
+        stats.weekendExcluded = (stats.weekendExcluded || 0) + 1;
+        resolved = true;
+        break;
+      }
       const high = Number(candle.high);
       const low = Number(candle.low);
       const takeProfit = Number(signal.takeProfit);
@@ -243,6 +251,10 @@ const versionStats =
     }
 
     if (resolved) {
+      continue;
+    }
+    if (crossedMarketClosure(Number(signal.entryAt || signal.createdAt), now)) {
+      stats.weekendExcluded = (stats.weekendExcluded || 0) + 1;
       continue;
     }
 

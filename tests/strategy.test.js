@@ -83,6 +83,12 @@ test('monitor builds saved read-only summaries without contacting push on stale 
     delete require.cache[require.resolve('../netlify/functions/monitor-market')];
     const result=await require('../netlify/functions/monitor-market').handler({});
     assert.equal(result.statusCode,200);
+    if (!require('../netlify/functions/fx-market-hours').isFxMarketOpen()) {
+      assert.equal(stored.length,0);
+      assert.equal(calls.length,0);
+      assert.equal(JSON.parse(result.body).reason,'fx-market-closed');
+      return;
+    }
     assert.equal(stored.length,5);
     assert.equal(calls.filter(x=>x.includes('time_series')).length,6);
     assert.equal(calls.filter(x=>x.includes('outputsize=5000')&&x.includes('timezone=UTC')).length,5);

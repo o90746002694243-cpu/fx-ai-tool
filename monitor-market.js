@@ -11,6 +11,7 @@ const {
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
 const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 const { notificationId } = require("./notification-id");
+const { canStartSixHourTrade } = require("./weekend-guard");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -189,14 +190,14 @@ const {
     // Never create hypothetical trades from stale feeds: they would pollute measured rates.
     const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
     if (!stale && latest.endTime <= Date.now() + 60 * 1000) {
-      trackCandidate(tracker, pair, analysis);
+      if (canStartSixHourTrade()) trackCandidate(tracker, pair, analysis);
     }
     // Use the provisional 60-index even with <30 samples. There is no
     // statistically calibrated probability before sufficient validation.
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
     const signalEligible = candidateEligible && probabilityPassed;
-    const shadowRecorded = trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
+    const shadowRecorded = canStartSixHourTrade() && trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
     const shadow = shadowSummary(tracker, pair);
     // Persist settlements before attempting a new push. A later API failure
     // must not discard completed trade results from an earlier pair.
@@ -205,7 +206,7 @@ const {
     }
     const alreadyTracking = hasOpenSignal(tracker, pair);
     const importantEvent = findImportantEvent(importantEvents, pair);
-    const shouldNotify = signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    const shouldNotify = canStartSixHourTrade() && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
 

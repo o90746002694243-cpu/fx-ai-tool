@@ -1,5 +1,6 @@
 "use strict";
 const { outcome } = require("./strategy");
+const { crossedMarketClosure } = require("./weekend-guard");
 const MAX_HISTORY = 300;
 const MAX_OPEN = 5;
 const MAX_AGE = 6 * 60 * 60 * 1000;
@@ -41,14 +42,17 @@ function settleShadows(tracker, pair, candles, now = Date.now()) {
     let result=null;
     // outcome ignores entry candle and uses only following price action.
     for(const c of candles) {
-      if(c.time < s.entryAt || c.time >= s.entryAt + MAX_AGE) continue;
+      if(c.time < s.entryAt) continue;
+      if(crossedMarketClosure(Number(s.entryAt),Number(c.time))) {result="weekendExcluded";break;}
+      if(c.time >= s.entryAt + MAX_AGE) continue;
       result=outcome(s,c);
       if(result) break;
     }
+    if(!result && crossedMarketClosure(Number(s.entryAt),now)) result="weekendExcluded";
     if(!result && now >= s.entryAt + MAX_AGE) result="expired";
     if(!result) {remaining.push(s); continue;}
-    const bucket = ((tracker.shadowStats[pair] ||= {})[s.category] ||= {wins:0,losses:0,ambiguous:0,expired:0});
-    bucket[result]++;
+    const bucket = ((tracker.shadowStats[pair] ||= {})[s.category] ||= {wins:0,losses:0,ambiguous:0,expired:0,weekendExcluded:0});
+    bucket[result]=(bucket[result]||0)+1;
     tracker.shadowHistory.push({...s,result,settledAt:now});
   }
   tracker.shadowOpen=remaining;
@@ -59,7 +63,7 @@ function shadowSummary(tracker,pair) {
   const pairStats=tracker.shadowStats[pair] || {};
   return {open: tracker.shadowOpen.filter(s=>s.pair===pair).length,
     categories:Object.fromEntries(CATEGORIES.map(category=>{
-      const b=pairStats[category] || {wins:0,losses:0,ambiguous:0,expired:0};
+      const b=pairStats[category] || {wins:0,losses:0,ambiguous:0,expired:0,weekendExcluded:0};
       const decided=b.wins+b.losses;
       return [category,{...b,decided,winRate:decided?Math.round(b.wins/decided*1000)/10:null}];
     }))};
