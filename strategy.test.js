@@ -69,7 +69,7 @@ test('monitor builds saved read-only summaries without contacting push on stale 
   const previous=require.cache[modulePath];
   const stored=[];
   require.cache[modulePath]={exports:{
-    loadTracker:async()=>({store:{setJSON:async(k,v)=>stored.push([k,v]),delete:async()=>{}},tracker:{openSignals:[],stats:{}}}),
+    loadTracker:async()=>({store:{get:async()=>null,setJSON:async(k,v)=>stored.push([k,v]),delete:async()=>{}},tracker:{openSignals:[],stats:{}}}),
     settlePairSignals:()=>{},hasOpenSignal:()=>false,addSignal:()=>{},formatActualWinRate:()=> '検証中（0件）',saveTracker:async()=>true
   }};
   const marketHoursPath=require.resolve('./netlify/functions/fx-market-hours');

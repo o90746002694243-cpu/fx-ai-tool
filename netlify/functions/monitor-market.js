@@ -12,6 +12,7 @@ const { qualifies, estimateProbability, provisional60Gate, settleCandidates, tra
 const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
+const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -206,7 +207,13 @@ const {
     }
     const alreadyTracking = hasOpenSignal(tracker, pair);
     const importantEvent = findImportantEvent(importantEvents, pair);
-    const shouldNotify = canStartSixHourTrade() && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    // Persisted alert history survives deployments and prevents sequential re-alerts
+    // even when a previous signal settled quickly. Concurrent invocations still
+    // rely on the deterministic OneSignal idempotency key for identical candles.
+    const pushLog = tradeStore ? await tradeStore.get("push-alert-history-v1", {type:"json"}) : null;
+    const pushGate = allowedToPush(pushLog, pair);
+    const reopeningBlocked = reopenCooldown();
+    const shouldNotify = canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
         console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
         console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
 
@@ -244,6 +251,8 @@ const actualWinRateText =
     }
     if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
+    if (reopeningBlocked) skipReasons.push("週明け市場再開後90分の新規通知停止");
+    if (!pushGate.allowed) skipReasons.push(pushGate.reason);
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
@@ -317,6 +326,14 @@ const actualWinRateText =
             notificationResponse.status + " " + JSON.stringify(notificationResult));
         }
         notificationSent = true;
+        // Save the accepted notification independently from the trade tracker.
+        // If persisting this fails, the existing OneSignal idempotency key still
+        // protects retries of the exact same candle; log the error for diagnosis.
+        try {
+          await tradeStore.setJSON("push-alert-history-v1", recordPush(pushLog, pair));
+        } catch (pushLogError) {
+          console.error("CRITICAL: notification accepted but push history save failed",pushLogError);
+        }
         console.log("OneSignal notification accepted:", {
           pair, id: notificationResult.id, recipients: recipientCount
         });
@@ -443,7 +460,7 @@ const actualWinRateText =
         skipReasons,
         diagnostic: {
           candidateEligible, probabilityPassed, eligible: signalEligible,
-          dataFresh: !stale, noOpenSignal: !alreadyTracking,
+          dataFresh: !stale, reopeningBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
           pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
           candleTime: latest.datetime, recordedAt: new Date().toISOString()
