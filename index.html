@@ -1174,7 +1174,7 @@ async function monitorMarket() {
       row.textContent = result.pair + "：" + result.direction + "候補／" + result.score + "点\n" +
         "1時間足：" + (higher.h1 || "不足") + " ／4時間足：" + (higher.h4 || "不足") + "\n" +
         "新ルール実績：" + (result.actualWinRate || "検証中") + "\n" +
-        "判定待ち：" + (result.pendingCount ?? 0) + "件（通知後、最大6時間で結果判定）\n" +
+        "判定待ち：" + (result.pendingCount ?? 0) + "件（新規通知は最大3時間、旧通知は6時間で結果判定）\n" +
         "\n【架空予想・仮想トレード】\n" +
         (result.paperTrade ?
           "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +

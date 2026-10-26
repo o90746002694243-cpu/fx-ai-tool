@@ -3,7 +3,8 @@ const { crossedMarketClosure } = require("./weekend-guard");
 const STORE_NAME = "fx-trade-results";
 const TRACKER_KEY = "tracker";
 const MIN_SAMPLE_SIZE = 30;
-const EXPIRY_MS = 6 * 60 * 60 * 1000;
+const EXPIRY_MS = 6 * 60 * 60 * 1000; // legacy notifications
+const NEW_EXPIRY_MS = 3 * 60 * 60 * 1000;
 async function getTradeStore(event) {
   const { connectLambda, getStore } = await import("@netlify/blobs");
 connectLambda(event);
@@ -118,6 +119,8 @@ function settlePairSignals(
       continue;
     }
 
+    const maxAgeMs = Number(signal.maxAgeMs) > 0 ? Number(signal.maxAgeMs) : EXPIRY_MS;
+    const entryAt = Number(signal.entryAt || signal.createdAt);
     if (signal.strategyVersion) {
   const currentStats = getStrategyStats(
     tracker,
@@ -131,7 +134,7 @@ function settlePairSignals(
         if (result) break;
       }
       if (!result && crossedMarketClosure(Number(signal.entryAt), now)) result = "weekendExcluded";
-      if (!result && now - signal.entryAt >= EXPIRY_MS) result = "expired";
+      if (!result && now - entryAt >= maxAgeMs) result = "expired";
             if (result) {
         currentStats[result] = (currentStats[result] || 0) + 1;
 
@@ -202,6 +205,7 @@ const versionStats =
     let resolved = false;
 
     for (const candle of newerCandles) {
+      if (Number(signal.maxAgeMs) > 0 && Number(candle.time) >= entryAt + maxAgeMs) break;
       if (crossedMarketClosure(Number(signal.entryAt || signal.createdAt), Number(candle.time))) {
         stats.weekendExcluded = (stats.weekendExcluded || 0) + 1;
         resolved = true;
@@ -259,9 +263,10 @@ const versionStats =
     }
 
     const age =
-      now - Number(signal.createdAt || now);
+      now - Number(Number(signal.maxAgeMs) > 0 ? (signal.entryAt || signal.createdAt || now) : (signal.createdAt || now));
 
-   if (age >= EXPIRY_MS) {
+   if (age >= maxAgeMs) {
+  if (Number(signal.maxAgeMs) > 0) {stats.expired += 1; continue;}
   const lastCandle = candles[candles.length - 1];
   const finalPrice = Number(lastCandle && lastCandle.close);
   const entryPrice = Number(signal.entryPrice);
@@ -335,7 +340,8 @@ function addSignal(tracker, signal) {
     candleTime: String(signal.candleTime || ""),
     strategyVersion: signal.strategyVersion,
     entryAt: Number(signal.entryAt) || Date.now(),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    maxAgeMs: NEW_EXPIRY_MS
   });
 
   return true;
