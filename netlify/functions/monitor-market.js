@@ -198,7 +198,7 @@ const {
     const previousShadowHistoryLength = Array.isArray(tracker.shadowHistory) ? tracker.shadowHistory.length : 0;
     settleShadows(tracker, pair, candles);
     for (const settled of (tracker.shadowHistory || []).slice(previousShadowHistoryLength)) {
-      console.log("FX shadow settlement:", JSON.stringify({pair:settled.pair, direction:settled.direction, entryAt:settled.entryAt, createdAt:settled.createdAt, entryPrice:settled.entryPrice, takeProfit:settled.takeProfit, stopLoss:settled.stopLoss, result:settled.result, settledAt:settled.settledAt}));
+      console.log("FX shadow settlement:", JSON.stringify({pair:settled.pair, direction:settled.direction, entryAt:settled.entryAt, createdAt:settled.createdAt, entryPrice:settled.entryPrice, takeProfit:settled.takeProfit, stopLoss:settled.stopLoss, result:settled.result, settledAt:settled.settledAt, expiryAt:settled.expiryAt, outcomeCandleEndTime:settled.outcomeCandleEndTime, exitReferencePrice:settled.exitReferencePrice, grossPips:settled.grossPips}));
     }
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);

@@ -1180,7 +1180,9 @@ async function monitorMarket() {
           "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +
           "方向：" + result.paperTrade.direction + "\n" +
           "仮想エントリー日時：" + formatPaperTradeTime(result.paperTrade.entryAt) + "\n" +
+          "判定期限：" + formatPaperTradeTime(Number(result.paperTrade.entryAt) + (Number(result.paperTrade.maxAgeMs) || 6*3600000)) + "\n" +
           "記録日時：" + formatPaperTradeTime(result.paperTrade.createdAt) + "\n" +
+          (result.paperTrade.result === "expired" ? "判定：時間切れ（予測未達）\n" : "") +
           (result.paperTrade.result ? "決済判定日時：" + formatPaperTradeTime(result.paperTrade.settledAt) + "\n" : "") +
           "エントリー：" + Number(result.paperTrade.entryPrice).toFixed(3) + "\n" +
           "利確：" + Number(result.paperTrade.takeProfit).toFixed(3) + "\n" +
