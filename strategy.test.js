@@ -122,6 +122,6 @@ test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
     assert(e.breakevenWinRate>0);
     if(e.direction==='買い')assert(e.takeProfit>e.entryPrice&&e.stopLoss<e.entryPrice);
     if(e.direction==='売り')assert(e.takeProfit<e.entryPrice&&e.stopLoss>e.entryPrice);
-    if(e.eligible)assert(e.riskReward>=1.2&&e.adx>=18);
+    if(e.eligible)assert(e.riskReward>=1.5&&e.adx>=18);
   }
 });

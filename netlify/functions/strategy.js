@@ -391,7 +391,7 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   !isWeakTrend &&
   !isCandleOpposed &&
   candleSignal!=="十字線" &&
-  netReward>0 && riskReward>=1.2 &&
+  netReward>0 && riskReward>=1.5 &&
   grossReward >= spreadPrice*3;
    return { chartPattern, candleSignal, atr, atrPips, adx, spreadPips:settings.spreadPips,
     netRewardPips:netReward/0.01, netRiskPips:netRisk/0.01, breakevenWinRate,

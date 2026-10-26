@@ -197,7 +197,7 @@ const {
     // statistically calibrated probability before sufficient validation.
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
-    const signalEligible = candidateEligible && probabilityPassed;
+    const signalEligible = candidateEligible && probabilityPassed; // Single notification eligibility gate; chart AI is independent, not an override.
     const shadowRecorded = canStartSixHourTrade() && trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
     const shadow = shadowSummary(tracker, pair);
     // Persist settlements before attempting a new push. A later API failure
@@ -214,16 +214,11 @@ const {
     const pushGate = allowedToPush(pushLog, pair);
     const reopeningBlocked = reopenCooldown();
     const shouldNotify = canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
-        console.log("ENV TEST:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length); 
-        console.log("NETLIFY TEST:", process.env.NETLIFY_ENV_TEST);
+
 
         const oneSignalKey = (process.env.ONESIGNAL_API_KEY || "").trim();
 
-console.log("OneSignal key info:", {
-  exists: !!oneSignalKey,
-  length: oneSignalKey.length,
-  startsCorrectly: oneSignalKey.startsWith("os_v2_app_")
-});
+
 
      const notificationKey =
   pair.replace("/", "-") + "-" + direction;
@@ -233,6 +228,7 @@ const isDuplicate = hasOpenSignal(tracker, pair);
 const actualWinRateText =
   formatActualWinRate(tracker, pair);
       
+    const decisionAt = new Date().toISOString();
     let notificationSent = false;
     let notificationErrorText = null;
     const skipReasons = [];
@@ -245,7 +241,7 @@ const actualWinRateText =
       if (analysis.isRangeTooSmall) skipReasons.push("値幅不足");
       // ADX is a reference factor; not an automatic veto.
       if (analysis.isCandleOpposed || analysis.candleSignal === "十字線") skipReasons.push("ローソク足条件未達");
-      if (!(analysis.netRewardPips > 0 && riskReward >= 1.2)) skipReasons.push("コスト控除後の利益・RR不足");
+      if (!(analysis.netRewardPips > 0 && riskReward >= 1.5)) skipReasons.push("コスト控除後の利益・RR不足");
 
       if (!skipReasons.length) skipReasons.push("その他の通知条件未達");
     }
@@ -256,9 +252,9 @@ const actualWinRateText =
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
-    if (shouldNotify && !isDuplicate) {
+    if (shouldNotify && !isDuplicate && oneSignalKey) {
       try {
-        console.log("OneSignal key check:", !!process.env.ONESIGNAL_API_KEY, "length:", process.env.ONESIGNAL_API_KEY?.length);
+
         const notificationResponse = await fetch(
           "https://api.onesignal.com/notifications",
           {
@@ -282,7 +278,8 @@ const actualWinRateText =
               contents: {
   en:
     pair + " " + direction + "候補\n" +
-    "従来の分析スコア：" + score + "点\n" +
+    "自動監視スコア（通知時）：" + score + "点\n" +
+    "判定足：" + latest.datetime + "／判定時刻UTC：" + decisionAt + "\n" +
     "暫定60%指数：" + provisional.estimatedScore + "（校正済み勝率ではありません）\n" +
     "類似条件の観測勝率：" + (probability.empiricalWinRate ?? "集計前") + "%（" + probability.sampleSize + "件）\n" +
     "新ルール実績: " + actualWinRateText + "\n" +
@@ -341,6 +338,7 @@ const actualWinRateText =
         const added = addSignal(tracker, {
           pair, direction, entryPrice, takeProfit, stopLoss, score,
           candleTime: latest.datetime, entryAt: Date.now(),
+          decisionAt, riskReward, provisionalIndex: provisional.estimatedScore,
           strategyVersion: STRATEGY_VERSION,
           chartPattern: analysis.chartPattern
         });
@@ -403,6 +401,7 @@ const actualWinRateText =
         direction,
 
         score,
+        decisionAt, candleTime:latest.datetime,
         probability,
         provisional,
         shadowRecorded, shadow,
@@ -451,7 +450,7 @@ const actualWinRateText =
         }),
         higherTimeframes,
         stale,
-        note: "90点ルール廃止。暫定60%指数で通知し、各通貨30件収集後に校正します。指数は実際の予測勝率ではありません。",
+        note: "自動監視の通知判定と画像AI分析は異なる時点・異なる手法です。暫定指数は校正済み勝率ではありません。通知の最低RRは1.5（スプレッド控除後）。",
 
         shouldNotify,
         notificationSent,
@@ -463,7 +462,7 @@ const actualWinRateText =
           dataFresh: !stale, reopeningBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
           pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
-          candleTime: latest.datetime, recordedAt: new Date().toISOString()
+          candleTime: latest.datetime, recordedAt: decisionAt
         },
 
         entryPrice:

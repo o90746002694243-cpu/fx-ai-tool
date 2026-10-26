@@ -8,7 +8,13 @@ function qualifies(a) {
   return a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
     !a.isRangeTooSmall && !a.isCandleOpposed &&
     a.candleSignal !== "十字線" && a.netRewardPips > 0 &&
-    a.riskReward >= 1.2 && a.score >= 70;
+    a.riskReward >= 1.5 && a.score >= 70;
+}
+// Broader observation pool: preserve paper-only research below the push RR floor.
+function qualifiesCandidate(a) {
+  return !!a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
+    !a.isRangeTooSmall && !a.isCandleOpposed && a.candleSignal !== "十字線" &&
+    a.netRewardPips > 0 && a.riskReward >= 1.2 && a.score >= 70;
 }
 function matchGroup(a) {
   return a.direction + "|" + (a.score >= 90 ? "high" : a.score >= 80 ? "medium" : "low");
@@ -66,7 +72,7 @@ function settleCandidates(tracker,pair,candles,now=Date.now()) {
   tracker.openCandidates=rest;
 }
 function trackCandidate(tracker,pair,a) {
-  if (!qualifies(a))return false;
+  if (!qualifiesCandidate(a))return false;
   tracker.openCandidates ||= [];
   const key=matchGroup(a);
   // One open hypothetical trade per pair, so 15m repeated checks won't dominate.
@@ -76,4 +82,4 @@ function trackCandidate(tracker,pair,a) {
     candleTime:a.candleTime});
   return true;
 }
-module.exports={MIN_COMPARABLE,qualifies,matchGroup,estimateProbability,provisional60Gate,settleCandidates,trackCandidate};
+module.exports={MIN_COMPARABLE,qualifies,qualifiesCandidate,matchGroup,estimateProbability,provisional60Gate,settleCandidates,trackCandidate};

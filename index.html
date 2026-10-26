@@ -1176,6 +1176,9 @@ async function monitorMarket() {
         "\n" +
         "過去参考：" + (bt.text || "未検証") + "\n" +
         "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
+        "自動監視の判定足：" + (result.candleTime || result.diagnostic?.candleTime || "不明") + "\n" +
+        "通知判定時刻：" + (result.decisionAt ? new Date(result.decisionAt).toLocaleString("ja-JP") : "不明") + "\n" +
+        "※上部の画像AI分析とは判定時刻・方式が異なります。\n" +
         "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
         "暫定60%指数：" + (result.provisional?.estimatedScore ?? "計算前") + "（実勝率ではありません）\n" +
         "類似条件の実績：" + (result.probability?.empiricalWinRate ?? "検証中") + "%／" + (result.probability?.sampleSize ?? 0) + "件\n" +
