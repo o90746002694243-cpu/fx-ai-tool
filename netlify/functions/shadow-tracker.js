@@ -15,24 +15,32 @@ function classify(analysis, gate, eligible) {
   if (eligible) return null;
   return !gate.passes ? "below60" : "otherFilter";
 }
-function trackShadow(tracker, pair, a, gate, eligible, latest, now = Date.now()) {
+function explainShadow(tracker, pair, a, gate, eligible, latest, now = Date.now()) {
   ensure(tracker);
   const category = classify(a, gate, eligible);
-  if (!category || !["買い", "売り"].includes(a.direction)) return false;
+  if (!category) return {recorded:false, reason:"eligibleForNotification"};
+  if (!["買い", "売り"].includes(a.direction)) return {recorded:false, reason:"invalidDirection"};
   if (!Number.isFinite(a.entryPrice) || !Number.isFinite(a.takeProfit) || !Number.isFinite(a.stopLoss) ||
     !(a.riskReward > 0) || !(a.entryPrice > 0) ||
     (a.direction === "買い" && !(a.stopLoss < a.entryPrice && a.entryPrice < a.takeProfit)) ||
-    (a.direction === "売り" && !(a.takeProfit < a.entryPrice && a.entryPrice < a.stopLoss))) return false;
-  if (!Number.isFinite(latest.endTime) || latest.endTime > now + 60000 || now - latest.endTime > 30 * 60000) return false;
-  // At most one concurrent paper trade per pair; don't flood on repeated polling.
-  if (tracker.shadowOpen.some(s => s.pair === pair) || tracker.shadowOpen.length >= MAX_OPEN ||
-    tracker.shadowLastBar[pair] === latest.endTime) return false;
+    (a.direction === "売り" && !(a.takeProfit < a.entryPrice && a.entryPrice < a.stopLoss)))
+    return {recorded:false, reason:"invalidPriceLevels"};
+  if (!latest || !Number.isFinite(latest.endTime) || latest.endTime > now + 60000 || now - latest.endTime > 30 * 60000)
+    return {recorded:false, reason:"staleOrInvalidCandle"};
+  const existing = tracker.shadowOpen.find(s => s.pair === pair);
+  if (existing) return {recorded:false, reason:"existingOpenTrade", existingEntryAt:existing.entryAt,
+    existingEntryPrice:existing.entryPrice, existingTakeProfit:existing.takeProfit, existingStopLoss:existing.stopLoss};
+  if (tracker.shadowOpen.length >= MAX_OPEN) return {recorded:false, reason:"maxOpenTrades"};
+  if (tracker.shadowLastBar[pair] === latest.endTime) return {recorded:false, reason:"alreadyRecordedThisBar"};
   tracker.shadowLastBar[pair] = latest.endTime;
   tracker.shadowOpen.push({pair, category, direction:a.direction, entryPrice:a.entryPrice,
     takeProfit:a.takeProfit, stopLoss:a.stopLoss, score:a.score,
     provisionalIndex:gate.estimatedScore, entryAt:latest.endTime,
     candleTime:latest.datetime, createdAt:now});
-  return true;
+  return {recorded:true, reason:"recorded"};
+}
+function trackShadow(tracker, pair, a, gate, eligible, latest, now = Date.now()) {
+  return explainShadow(tracker, pair, a, gate, eligible, latest, now).recorded;
 }
 function settleShadows(tracker, pair, candles, now = Date.now()) {
   ensure(tracker);
@@ -68,4 +76,4 @@ function shadowSummary(tracker,pair) {
       return [category,{...b,decided,winRate:decided?Math.round(b.wins/decided*1000)/10:null}];
     }))};
 }
-module.exports={trackShadow,settleShadows,shadowSummary};
+module.exports={trackShadow,explainShadow,settleShadows,shadowSummary};

@@ -9,7 +9,7 @@ const {
 } = require("./trade-tracker");
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
-const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
+const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
@@ -195,7 +195,11 @@ const {
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
     settleCandidates(tracker, pair, candles);
+    const previousShadowHistoryLength = Array.isArray(tracker.shadowHistory) ? tracker.shadowHistory.length : 0;
     settleShadows(tracker, pair, candles);
+    for (const settled of (tracker.shadowHistory || []).slice(previousShadowHistoryLength)) {
+      console.log("FX shadow settlement:", JSON.stringify({pair:settled.pair, direction:settled.direction, entryAt:settled.entryAt, createdAt:settled.createdAt, entryPrice:settled.entryPrice, takeProfit:settled.takeProfit, stopLoss:settled.stopLoss, result:settled.result, settledAt:settled.settledAt}));
+    }
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);
     const provisional = provisional60Gate(analysis, probability);
@@ -211,7 +215,11 @@ const {
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
     const signalEligible = candidateEligible && probabilityPassed; // Single notification eligibility gate; chart AI is independent, not an override.
-    const shadowRecorded = canStartSixHourTrade() && trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
+    const shadowDiagnostic = canStartSixHourTrade()
+      ? explainShadow(tracker, pair, analysis, provisional, signalEligible, latest)
+      : {recorded:false, reason:"marketSessionGuard"};
+    const shadowRecorded = shadowDiagnostic.recorded;
+    console.log("FX shadow diagnostic:", JSON.stringify({pair, ...shadowDiagnostic, open: (tracker.shadowOpen || []).filter(s => s.pair === pair).length}));
     const shadow = shadowSummary(tracker, pair);
     // Persist settlements before attempting a new push. A later API failure
     // must not discard completed trade results from an earlier pair.
@@ -372,7 +380,7 @@ const actualWinRateText =
       currentPrice,
       direction,
       score,
-      probability, provisional, shadowRecorded, shadow,
+      probability, provisional, shadowRecorded, shadowDiagnostic, shadow,
       shouldNotify,
       notificationSent,
       skipReasons,
