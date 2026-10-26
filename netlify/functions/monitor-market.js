@@ -156,11 +156,15 @@ const {
     const history = backtest(candles, pair);
     // Five-minute candles are reference-only. Failure never prevents 15-minute analysis.
     let fiveMinuteBars = [];
+    let m5Status = "未取得";
+    let m5Error = null;
     try {
       // One optional M5 request per run: five M15 + one M5 <= 8 credits/min.
       // Cycle through pairs each 15-minute slot; all M15 pairs remain checked.
       const slot = Math.floor(Date.now() / (15 * 60 * 1000));
-      if (pairIndex !== slot % pairs.length) throw new Error("M5はAPI節約のため今回は省略");
+      if (pairIndex !== slot % pairs.length) {
+        m5Status = "API節約のため計画的に省略";
+      } else {
       const fiveMinUrl = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(pair)}&interval=5min&outputsize=35&timezone=UTC&apikey=${apiKey}`;
       const fiveResponse = await fetch(fiveMinUrl, {signal: AbortSignal.timeout(8000)});
       const fiveData = await fiveResponse.json();
@@ -175,9 +179,16 @@ const {
           }
         }
         fiveMinuteBars = [...bucket.values()].sort((a,b)=>a.time-b.time);
+        m5Status = fiveMinuteBars.length ? "取得成功" : "有効な確定M5足なし";
+      } else {
+        m5Status = "取得失敗";
+        m5Error = String(fiveData.message || `HTTP ${fiveResponse.status}`).slice(0, 180);
+      }
       }
     } catch (err) {
-      console.warn("Optional M5 reference unavailable:", String(err.message || err));
+      m5Status = "取得失敗";
+      m5Error = String(err.message || err).slice(0, 180);
+      console.warn("Optional M5 reference fetch failure:", m5Error);
     }
     const analysis = evaluate(candles, {m5: fiveMinuteBars, h1: aggregate(candles, 1), h4: aggregate(candles, 4)}, pair);
     const { currentPrice, direction, score, entryPrice, takeProfit, stopLoss, riskReward,
@@ -189,7 +200,9 @@ const {
     const candidateEligible = qualifies(analysis);
     const provisional = provisional60Gate(analysis, probability);
     // Never create hypothetical trades from stale feeds: they would pollute measured rates.
-    const stale = Date.now() - latest.endTime > 30 * 60 * 1000;
+    const candleAgeSeconds = Math.round((Date.now() - latest.endTime) / 1000);
+    const stale = candleAgeSeconds > 30 * 60;
+    console.log("FX feed diagnostic:", JSON.stringify({pair, interval, candleTime: latest.datetime, candleEndTimeUtc: new Date(latest.endTime).toISOString(), checkedAtUtc: new Date().toISOString(), candleAgeSeconds, stale, m5Status, m5Error, m5Bars: fiveMinuteBars.length}));
     if (!stale && latest.endTime <= Date.now() + 60 * 1000) {
       if (canStartSixHourTrade()) trackCandidate(tracker, pair, analysis);
     }
@@ -367,7 +380,7 @@ const actualWinRateText =
       eligible: analysis.eligible,
       higherAligned: analysis.higherAligned,
       higherTimeframes,
-      stale,
+      stale, candleAgeSeconds, m5Status, m5Error,
       alreadyTracking,
       importantEvent,
       storeAvailable: Boolean(tradeStore),
@@ -449,7 +462,7 @@ const actualWinRateText =
           };
         }),
         higherTimeframes,
-        stale,
+        stale, candleAgeSeconds, m5Status, m5Error,
         note: "自動監視の通知判定と画像AI分析は異なる時点・異なる手法です。暫定指数は校正済み勝率ではありません。通知の最低RRは1.5（スプレッド控除後）。",
 
         shouldNotify,
@@ -462,7 +475,7 @@ const actualWinRateText =
           dataFresh: !stale, reopeningBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
           pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
-          candleTime: latest.datetime, recordedAt: decisionAt
+          candleTime: latest.datetime, candleAgeSeconds, m5Status, m5Error, recordedAt: decisionAt
         },
 
         entryPrice:
