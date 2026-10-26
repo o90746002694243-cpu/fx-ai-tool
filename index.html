@@ -1132,6 +1132,20 @@ function renderHistory(){
       .join("");
 }
 
+// Show saved paper-trade timestamps in Japan time (not the latest check time).
+function formatPaperTradeTime(value) {
+  if (value === undefined || value === null || value === "") return "記録なし（旧データ）";
+  const numeric = Number(value);
+  const timestamp = Number.isFinite(numeric) && numeric > 0
+    ? new Date(numeric < 1e11 ? numeric * 1000 : numeric)
+    : new Date(value);
+  if (!Number.isFinite(timestamp.getTime())) return "記録なし（旧データ）";
+  return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+  }).format(timestamp) + "（日本時間）";
+}
+
 // ===== Read-only scheduled monitoring summaries =====
 async function monitorMarket() {
   const box = document.getElementById("marketSummary");
@@ -1165,6 +1179,9 @@ async function monitorMarket() {
         (result.paperTrade ?
           "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +
           "方向：" + result.paperTrade.direction + "\n" +
+          "仮想エントリー日時：" + formatPaperTradeTime(result.paperTrade.entryAt) + "\n" +
+          "記録日時：" + formatPaperTradeTime(result.paperTrade.createdAt) + "\n" +
+          (result.paperTrade.result ? "決済判定日時：" + formatPaperTradeTime(result.paperTrade.settledAt) + "\n" : "") +
           "エントリー：" + Number(result.paperTrade.entryPrice).toFixed(3) + "\n" +
           "利確：" + Number(result.paperTrade.takeProfit).toFixed(3) + "\n" +
           "損切り：" + Number(result.paperTrade.stopLoss).toFixed(3) + "\n" :
