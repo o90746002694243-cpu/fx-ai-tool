@@ -13,6 +13,7 @@ const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker"
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
+const { isJstQuietHours } = require("./quiet-hours");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -234,7 +235,8 @@ const {
     const pushLog = tradeStore ? await tradeStore.get("push-alert-history-v1", {type:"json"}) : null;
     const pushGate = allowedToPush(pushLog, pair);
     const reopeningBlocked = reopenCooldown();
-    const shouldNotify = canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    const quietHoursBlocked = isJstQuietHours();
+    const shouldNotify = !quietHoursBlocked && canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
 
 
         const oneSignalKey = (process.env.ONESIGNAL_API_KEY || "").trim();
@@ -269,6 +271,7 @@ const actualWinRateText =
     if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
     if (reopeningBlocked) skipReasons.push("週明け市場再開後90分の新規通知停止");
+    if (quietHoursBlocked) skipReasons.push("日本時間02:00〜08:00は新規通知を停止（仮想検証・決済判定は継続）");
     if (!pushGate.allowed) skipReasons.push(pushGate.reason);
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
@@ -480,7 +483,7 @@ const actualWinRateText =
         skipReasons,
         diagnostic: {
           candidateEligible, probabilityPassed, eligible: signalEligible,
-          dataFresh: !stale, reopeningBlocked, pushGate, noOpenSignal: !alreadyTracking,
+          dataFresh: !stale, reopeningBlocked, quietHoursBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
           pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
           candleTime: latest.datetime, candleAgeSeconds, m5Status, m5Error, recordedAt: decisionAt
