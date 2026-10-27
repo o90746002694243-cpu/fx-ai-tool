@@ -10,6 +10,7 @@ const {
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
 const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
+const parallel = require("./parallel-strategies");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
@@ -196,6 +197,10 @@ const {
     settlePairSignals(tracker, pair, candles);
     settleCandidates(tracker, pair, candles);
     settleShadows(tracker, pair, candles);
+    parallel.settle(tracker, pair, candles);
+    const parallelCandidates = parallel.record(tracker, pair, analysis, latest);
+    const parallelSummary = parallel.summary(tracker, pair);
+    console.log("FX parallel strategy diagnostic:", JSON.stringify({pair, candidates:parallelCandidates.length, comparison:parallelSummary}));
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);
     const provisional = provisional60Gate(analysis, probability);
@@ -372,7 +377,7 @@ const actualWinRateText =
       currentPrice,
       direction,
       score,
-      probability, provisional, shadowRecorded, shadow,
+      probability, provisional, shadowRecorded, shadow, parallelSummary,
       shouldNotify,
       notificationSent,
       skipReasons,
@@ -417,7 +422,7 @@ const actualWinRateText =
         decisionAt, candleTime:latest.datetime,
         probability,
         provisional,
-        shadowRecorded, shadow,
+        shadowRecorded, shadow, parallelSummary,
         notificationMode: "暫定60%指数ルール（各通貨30件まで検証）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
