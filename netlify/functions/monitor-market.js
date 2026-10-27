@@ -10,6 +10,7 @@ const {
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
 const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
+const parallel = require("./parallel-strategies");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
@@ -208,6 +209,14 @@ const {
     const candleAgeSeconds = Math.round((Date.now() - latest.endTime) / 1000);
     const stale = candleAgeSeconds > 30 * 60;
     console.log("FX feed diagnostic:", JSON.stringify({pair, interval, candleTime: latest.datetime, candleEndTimeUtc: new Date(latest.endTime).toISOString(), checkedAtUtc: new Date().toISOString(), candleAgeSeconds, stale, m5Status, m5Error, m5Bars: fiveMinuteBars.length}));
+    // Research-only comparison. Never influences the live notification gate.
+    // Avoid recording candidates from stale/future candles or without durable storage.
+    parallel.settle(tracker, pair, candles);
+    const parallelCandidates = !stale && latest.endTime <= Date.now() + 60 * 1000 && Boolean(tradeStore)
+      ? parallel.record(tracker, pair, analysis, latest)
+      : [];
+    const parallelSummary = parallel.summary(tracker, pair);
+    console.log("FX parallel strategy diagnostic:", JSON.stringify({pair, candidates:parallelCandidates.length, comparison:parallelSummary, stale, storeAvailable:Boolean(tradeStore)}));
     if (!stale && latest.endTime <= Date.now() + 60 * 1000) {
       if (canStartSixHourTrade()) trackCandidate(tracker, pair, analysis);
     }
