@@ -9,11 +9,12 @@ const {
 } = require("./trade-tracker");
 
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
-const {trackShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
+const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 const parallel = require("./parallel-strategies");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
+const { isJstQuietHours } = require("./quiet-hours");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -114,7 +115,7 @@ const {
         const pairsToCheck = pairs;
 
     const interval = "15min";
-    const targetScore = 70; // provisional 60-index starts at 70 score, not the old 90 threshold
+    const targetScore = null; // No separate score threshold: provisional index and safety gates only
     const results = [];
 
     const pairErrors = [];
@@ -196,11 +197,11 @@ const {
       sma5, sma20, rsi, support, resistance, isRsiExtreme, isSharpMove, higherTimeframes } = analysis;
     settlePairSignals(tracker, pair, candles);
     settleCandidates(tracker, pair, candles);
+    const previousShadowHistoryLength = Array.isArray(tracker.shadowHistory) ? tracker.shadowHistory.length : 0;
     settleShadows(tracker, pair, candles);
-    parallel.settle(tracker, pair, candles);
-    const parallelCandidates = parallel.record(tracker, pair, analysis, latest);
-    const parallelSummary = parallel.summary(tracker, pair);
-    console.log("FX parallel strategy diagnostic:", JSON.stringify({pair, candidates:parallelCandidates.length, comparison:parallelSummary}));
+    for (const settled of (tracker.shadowHistory || []).slice(previousShadowHistoryLength)) {
+      console.log("FX shadow settlement:", JSON.stringify({pair:settled.pair, direction:settled.direction, entryAt:settled.entryAt, createdAt:settled.createdAt, entryPrice:settled.entryPrice, takeProfit:settled.takeProfit, stopLoss:settled.stopLoss, result:settled.result, settledAt:settled.settledAt, expiryAt:settled.expiryAt, outcomeCandleEndTime:settled.outcomeCandleEndTime, exitReferencePrice:settled.exitReferencePrice, grossPips:settled.grossPips}));
+    }
     const probability = estimateProbability(tracker, pair, analysis);
     const candidateEligible = qualifies(analysis);
     const provisional = provisional60Gate(analysis, probability);
@@ -208,6 +209,14 @@ const {
     const candleAgeSeconds = Math.round((Date.now() - latest.endTime) / 1000);
     const stale = candleAgeSeconds > 30 * 60;
     console.log("FX feed diagnostic:", JSON.stringify({pair, interval, candleTime: latest.datetime, candleEndTimeUtc: new Date(latest.endTime).toISOString(), checkedAtUtc: new Date().toISOString(), candleAgeSeconds, stale, m5Status, m5Error, m5Bars: fiveMinuteBars.length}));
+    // Research-only comparison. Never influences the live notification gate.
+    // Avoid recording candidates from stale/future candles or without durable storage.
+    parallel.settle(tracker, pair, candles);
+    const parallelCandidates = !stale && latest.endTime <= Date.now() + 60 * 1000 && Boolean(tradeStore)
+      ? parallel.record(tracker, pair, analysis, latest)
+      : [];
+    const parallelSummary = parallel.summary(tracker, pair);
+    console.log("FX parallel strategy diagnostic:", JSON.stringify({pair, candidates:parallelCandidates.length, comparison:parallelSummary, stale, storeAvailable:Boolean(tradeStore)}));
     if (!stale && latest.endTime <= Date.now() + 60 * 1000) {
       if (canStartSixHourTrade()) trackCandidate(tracker, pair, analysis);
     }
@@ -216,7 +225,11 @@ const {
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
     const signalEligible = candidateEligible && probabilityPassed; // Single notification eligibility gate; chart AI is independent, not an override.
-    const shadowRecorded = canStartSixHourTrade() && trackShadow(tracker, pair, analysis, provisional, signalEligible, latest);
+    const shadowDiagnostic = canStartSixHourTrade()
+      ? explainShadow(tracker, pair, analysis, provisional, signalEligible, latest)
+      : {recorded:false, reason:"marketSessionGuard"};
+    const shadowRecorded = shadowDiagnostic.recorded;
+    console.log("FX shadow diagnostic:", JSON.stringify({pair, ...shadowDiagnostic, open: (tracker.shadowOpen || []).filter(s => s.pair === pair).length}));
     const shadow = shadowSummary(tracker, pair);
     // Persist settlements before attempting a new push. A later API failure
     // must not discard completed trade results from an earlier pair.
@@ -231,7 +244,8 @@ const {
     const pushLog = tradeStore ? await tradeStore.get("push-alert-history-v1", {type:"json"}) : null;
     const pushGate = allowedToPush(pushLog, pair);
     const reopeningBlocked = reopenCooldown();
-    const shouldNotify = canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    const quietHoursBlocked = isJstQuietHours();
+    const shouldNotify = !quietHoursBlocked && canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
 
 
         const oneSignalKey = (process.env.ONESIGNAL_API_KEY || "").trim();
@@ -252,13 +266,11 @@ const actualWinRateText =
     const skipReasons = [];
     if (!signalEligible) {
       if (!probabilityPassed) skipReasons.push("暫定60%指数未満（" + provisional.estimatedScore + "）");
-      if (score < 70) skipReasons.push("スコア不足：" + score + "点");
       if (direction === "見送り") skipReasons.push("売買方向が不明");
       if (analysis.isRsiExtreme) skipReasons.push("RSI極端値");
       if (analysis.isSharpMove) skipReasons.push("急変動");
       if (analysis.isRangeTooSmall) skipReasons.push("値幅不足");
       // ADX is a reference factor; not an automatic veto.
-      if (analysis.isCandleOpposed || analysis.candleSignal === "十字線") skipReasons.push("ローソク足条件未達");
       if (!(analysis.netRewardPips > 0 && riskReward >= 1.5)) skipReasons.push("コスト控除後の利益・RR不足");
 
       if (!skipReasons.length) skipReasons.push("その他の通知条件未達");
@@ -266,6 +278,7 @@ const actualWinRateText =
     if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
     if (reopeningBlocked) skipReasons.push("週明け市場再開後90分の新規通知停止");
+    if (quietHoursBlocked) skipReasons.push("日本時間02:00〜08:00は新規通知を停止（仮想検証・決済判定は継続）");
     if (!pushGate.allowed) skipReasons.push(pushGate.reason);
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
@@ -377,7 +390,7 @@ const actualWinRateText =
       currentPrice,
       direction,
       score,
-      probability, provisional, shadowRecorded, shadow, parallelSummary,
+      probability, provisional, shadowRecorded, shadowDiagnostic, shadow,
       shouldNotify,
       notificationSent,
       skipReasons,
@@ -422,8 +435,8 @@ const actualWinRateText =
         decisionAt, candleTime:latest.datetime,
         probability,
         provisional,
-        shadowRecorded, shadow, parallelSummary,
-        notificationMode: "暫定60%指数ルール（各通貨30件まで検証）",
+        shadowRecorded, shadow,
+        notificationMode: "簡素化ルール：暫定指数60以上＋安全条件（実際の予測勝率ではありません）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
         actualWinRate: actualWinRateText,
@@ -477,7 +490,7 @@ const actualWinRateText =
         skipReasons,
         diagnostic: {
           candidateEligible, probabilityPassed, eligible: signalEligible,
-          dataFresh: !stale, reopeningBlocked, pushGate, noOpenSignal: !alreadyTracking,
+          dataFresh: !stale, reopeningBlocked, quietHoursBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
           pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
           candleTime: latest.datetime, candleAgeSeconds, m5Status, m5Error, recordedAt: decisionAt

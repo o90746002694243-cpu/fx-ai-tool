@@ -6,15 +6,14 @@ const { evaluate, outcome } = require("./strategy");
 const MIN_COMPARABLE = 30;
 function qualifies(a) {
   return a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
-    !a.isRangeTooSmall && !a.isCandleOpposed &&
-    a.candleSignal !== "十字線" && a.netRewardPips > 0 &&
-    a.riskReward >= 1.5 && a.score >= 70;
+    !a.isRangeTooSmall && a.netRewardPips > 0 &&
+    a.riskReward >= 1.5;
 }
 // Broader observation pool: preserve paper-only research below the push RR floor.
 function qualifiesCandidate(a) {
   return !!a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
-    !a.isRangeTooSmall && !a.isCandleOpposed && a.candleSignal !== "十字線" &&
-    a.netRewardPips > 0 && a.riskReward >= 1.2 && a.score >= 70;
+    !a.isRangeTooSmall &&
+    a.netRewardPips > 0 && a.riskReward >= 1.2;
 }
 function matchGroup(a) {
   return a.direction + "|" + (a.score >= 90 ? "high" : a.score >= 80 ? "medium" : "low");
@@ -42,7 +41,7 @@ function estimateProbability(tracker, pair, a) {
 // inventing wins when the history is empty. Prior is deliberately disclosed.
 function provisional60Gate(analysis, empirical) {
   const score = Number(analysis.score);
-  const prior = Number.isFinite(score) ? Math.max(0, Math.min(100, 60 + (score - 70) * 0.5)) : 0;
+  const prior = Number.isFinite(score) ? Math.max(0, Math.min(100, 60 + (score - 65) * 0.5)) : 0;
   const n = empirical.sampleSize;
   const rate = n ? (30 * prior + n * empirical.empiricalWinRate) / (30 + n) : prior;
   return { estimatedScore: Math.round(rate * 10) / 10, passes: rate >= 60,
