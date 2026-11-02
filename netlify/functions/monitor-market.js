@@ -11,6 +11,7 @@ const {
 const { qualifies, estimateProbability, provisional60Gate, settleCandidates, trackCandidate } = require("./probability");
 const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker");
 const parallel = require("./parallel-strategies");
+const { audit: auditFeatures } = require("./feature-audit");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
@@ -438,6 +439,7 @@ const actualWinRateText =
         probability,
         provisional,
         shadowRecorded, shadow,
+        featureAudit: auditFeatures(tracker.shadowHistory, pair),
         notificationMode: "暫定60%指数ルール（各通貨30件まで検証）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
