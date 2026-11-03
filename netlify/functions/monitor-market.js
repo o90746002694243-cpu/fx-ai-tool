@@ -15,7 +15,6 @@ const { audit: auditFeatures } = require("./feature-audit");
 const { notificationId } = require("./notification-id");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
-const { isJstQuietHours } = require("./quiet-hours");
 async function loadImportantEvents() {
   try {
     const response = await fetch(
@@ -245,8 +244,10 @@ const {
     const pushLog = tradeStore ? await tradeStore.get("push-alert-history-v1", {type:"json"}) : null;
     const pushGate = allowedToPush(pushLog, pair);
     const reopeningBlocked = reopenCooldown();
-    const quietHoursBlocked = isJstQuietHours();
-    const shouldNotify = !quietHoursBlocked && canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
+    // No blanket JST 02:00-08:00 push ban: trade-quality, spread, event,
+    // cooldown and market-session checks still apply at every hour.
+    const quietHoursBlocked = false; // retained for backward-compatible diagnostics
+    const shouldNotify = canStartSixHourTrade() && !reopeningBlocked && pushGate.allowed && signalEligible && !stale && !alreadyTracking && !importantEvent && Boolean(tradeStore);
 
 
         const oneSignalKey = (process.env.ONESIGNAL_API_KEY || "").trim();
@@ -281,7 +282,6 @@ const actualWinRateText =
     if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
     if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
     if (reopeningBlocked) skipReasons.push("週明け市場再開後90分の新規通知停止");
-    if (quietHoursBlocked) skipReasons.push("日本時間02:00〜08:00は新規通知を停止（仮想検証・決済判定は継続）");
     if (!pushGate.allowed) skipReasons.push(pushGate.reason);
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
