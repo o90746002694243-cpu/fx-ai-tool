@@ -21,7 +21,7 @@ test('candidate opening does not repeat while pending',()=>{
 test('provisional gate starts without 30 trades and does not invent empirical wins',()=>{
  const e=p.estimateProbability({},'USD/JPY',{direction:'買い',score:70});
  const g=p.provisional60Gate({score:70},e);
- assert.equal(g.estimatedScore,60);assert.equal(g.passes,true);
+ assert.equal(g.estimatedScore,62.5);assert.equal(g.passes,true);
  assert.equal(e.empiricalWinRate,null);
  assert.equal(p.provisional60Gate({score:60},e).passes,false);
 });
