@@ -15,3 +15,17 @@ test('market status displays tracker stats and pending signals, not stale snapsh
   assert.equal(item.pendingSince,1234);
  } finally { if(previous)require.cache[trackerPath]=previous;else delete require.cache[trackerPath]; if(oldEndpoint)require.cache[endpoint]=oldEndpoint;else delete require.cache[endpoint]; }
 });
+
+test('shadow record totals use cumulative settled statistics, not capped history length',async()=>{
+ const trackerPath=require.resolve('../netlify/functions/trade-tracker');
+ const previous=require.cache[trackerPath];
+ require.cache[trackerPath]={exports:{loadTracker:async()=>({store:{get:async key=>key==='market-AUD-JPY'?{pair:'AUD/JPY'}:null},tracker:{openSignals:[],shadowOpen:[{pair:'AUD/JPY'}],shadowHistory:[{pair:'AUD/JPY',result:'wins'}],shadowStats:{'AUD/JPY':{below60:{wins:35,losses:20,expired:5},otherFilter:{wins:2,ambiguous:3,weekendExcluded:1}}}}}),formatActualWinRate:()=> '検証中'}};
+ const endpoint=require.resolve('../netlify/functions/market-status');
+ const oldEndpoint=require.cache[endpoint];delete require.cache[endpoint];
+ try {
+  const res=await require(endpoint).handler({});
+  assert.equal(res.statusCode,200);
+  const item=JSON.parse(res.body).results[0];
+  assert.deepEqual(item.shadowRecordCounts,{pending:1,settledTotal:66,retainedHistory:1});
+ } finally {if(previous)require.cache[trackerPath]=previous;else delete require.cache[trackerPath];if(oldEndpoint)require.cache[endpoint]=oldEndpoint;else delete require.cache[endpoint];}
+});
