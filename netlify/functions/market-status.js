@@ -15,6 +15,15 @@ exports.handler = async event => {
       pendingCount: tracker.openSignals.filter(s => s.pair === result.pair).length,
       pendingSince: tracker.openSignals.find(s => s.pair === result.pair)?.createdAt || null,
       strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null,
+      // Lifetime settled counts come from cumulative stats, not the capped history array.
+      // The history count can decrease when old snapshots are pruned; it is NOT a lifetime total.
+      shadowRecordCounts: {
+        pending: (tracker.shadowOpen || []).filter(s => s.pair === result.pair).length,
+        settledTotal: Object.values(tracker.shadowStats?.[result.pair] || {}).reduce((sum, bucket) =>
+          sum + ["wins", "losses", "ambiguous", "expired", "weekendExcluded"].reduce((n, key) =>
+            n + (Number.isFinite(bucket?.[key]) && bucket[key] >= 0 ? bucket[key] : 0), 0), 0),
+        retainedHistory: (tracker.shadowHistory || []).filter(s => s.pair === result.pair).length
+      },
       // Current paper-trade position or latest settled one; never mislabel a candidate as recorded.
       paperTrade: (tracker.shadowOpen || []).filter(s => s.pair === result.pair).slice(-1)[0] ||
         (tracker.shadowHistory || []).filter(s => s.pair === result.pair).slice(-1)[0] || null
