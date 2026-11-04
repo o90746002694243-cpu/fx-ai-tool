@@ -1176,6 +1176,8 @@ async function monitorMarket() {
         "新ルール実績：" + (result.actualWinRate || "検証中") + "\n" +
         "判定待ち：" + (result.pendingCount ?? 0) + "件（新規通知は最大3時間、旧通知は6時間で結果判定）\n" +
         "\n【架空予想・仮想トレード】\n" +
+        "確定済み累計：" + (result.shadowRecordCounts?.settledTotal ?? "未取得") + "件／判定待ち：" + (result.shadowRecordCounts?.pending ?? "未取得") + "件\n" +
+        "画面参照用の保存履歴：" + (result.shadowRecordCounts?.retainedHistory ?? "未取得") + "件（古い履歴は上限で整理されます）\n" +
         (result.paperTrade ?
           "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +
           "方向：" + result.paperTrade.direction + "\n" +
