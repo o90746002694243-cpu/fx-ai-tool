@@ -1171,43 +1171,31 @@ async function monitorMarket() {
       const bt = result.backtest || {};
       const higher = result.higherTimeframes || {};
       const old = Date.now() - Date.parse(result.checkedAt) > 90 * 60 * 1000;
-      row.textContent = result.pair + "：" + result.direction + "候補／" + result.score + "点\n" +
-        "1時間足：" + (higher.h1 || "不足") + " ／4時間足：" + (higher.h4 || "不足") + "\n" +
-        "新ルール実績：" + (result.actualWinRate || "検証中") + "\n" +
-        "判定待ち：" + (result.pendingCount ?? 0) + "件（新規通知は最大3時間、旧通知は6時間で結果判定）\n" +
-        "\n【架空予想・仮想トレード】\n" +
-        "確定済み累計：" + (result.shadowRecordCounts?.settledTotal ?? "未取得") + "件／判定待ち：" + (result.shadowRecordCounts?.pending ?? "未取得") + "件\n" +
-        "画面参照用の保存履歴：" + (result.shadowRecordCounts?.retainedHistory ?? "未取得") + "件（古い履歴は上限で整理されます）\n" +
-        (result.paperTrade ?
-          "状態：" + (result.paperTrade.result ? "結果確定（" + result.paperTrade.result + "）" : "記録済み・判定待ち") + "\n" +
-          "方向：" + result.paperTrade.direction + "\n" +
-          "仮想エントリー日時：" + formatPaperTradeTime(result.paperTrade.entryAt) + "\n" +
-          "判定期限：" + formatPaperTradeTime(Number(result.paperTrade.entryAt) + (Number(result.paperTrade.maxAgeMs) || 6*3600000)) + "\n" +
-          "記録日時：" + formatPaperTradeTime(result.paperTrade.createdAt) + "\n" +
-          (result.paperTrade.result === "expired" ? "判定：時間切れ（予測未達）\n" : "") +
-          (result.paperTrade.result ? "決済判定日時：" + formatPaperTradeTime(result.paperTrade.settledAt) + "\n" : "") +
-          "エントリー：" + Number(result.paperTrade.entryPrice).toFixed(3) + "\n" +
-          "利確：" + Number(result.paperTrade.takeProfit).toFixed(3) + "\n" +
-          "損切り：" + Number(result.paperTrade.stopLoss).toFixed(3) + "\n" :
-          "仮想記録なし（現在の分析候補・未記録）\n" +
-          "方向：" + (['買い','売り'].includes(result.direction) ? result.direction : "未確定") + "\n" +
-          "エントリー：" + (Number.isFinite(Number(result.entryPrice)) ? Number(result.entryPrice).toFixed(3) : "-") + "\n" +
-          "利確：" + (Number.isFinite(Number(result.takeProfit)) ? Number(result.takeProfit).toFixed(3) : "-") + "\n" +
-          "損切り：" + (Number.isFinite(Number(result.stopLoss)) ? Number(result.stopLoss).toFixed(3) : "-") + "\n") +
-        "\n" +
-        "過去参考：" + (bt.text || "未検証") + "\n" +
-        "期間（UTC）：" + (bt.from || "-") + " ～ " + (bt.to || "-") + "\n" +
-        "自動監視の判定足：" + (result.candleTime || result.diagnostic?.candleTime || "不明") + "\n" +
-        "通知判定時刻：" + (result.decisionAt ? new Date(result.decisionAt).toLocaleString("ja-JP") : "不明") + "\n" +
-        "※上部の画像AI分析とは判定時刻・方式が異なります。\n" +
-        "通知方式：" + (result.notificationMode || "従来方式") + "\n" +
-        "暫定60%指数：" + (result.provisional?.estimatedScore ?? "計算前") + "（実勝率ではありません）\n" +
-        "類似条件の実績：" + (result.probability?.empiricalWinRate ?? "検証中") + "%／" + (result.probability?.sampleSize ?? 0) + "件\n" +
-        "通知判定：" + (result.notificationStatus || "詳細未記録（更新待ち）") + "\n" +
-        "見送り理由：" + ((result.skipReasons || []).join("／") || result.notificationReason || "なし") + "\n" +
-        "通知処理：" + (result.diagnostic ? (result.diagnostic.pushAttempted ? (result.diagnostic.pushAccepted ? "OneSignal受理" : "送信試行・未受理") : "送信条件未達") : "更新待ち") + "\n" +
+      const stats = result.simpleStats || {};
+      const paper = result.paperTrade;
+      const num = n => Number.isFinite(Number(n)) ? Number(n).toFixed(3) : "-";
+      row.textContent = result.pair + "：" + result.direction + "\n" +
+        "方式：" + (result.notificationMode || "旧版") + "\n" +
+        "【新方式・実測結果】\n" +
+        "確定：" + (stats.completed ?? 0) + "件／判定待ち：" + (stats.pending ?? 0) + "件\n" +
+        "勝ち：" + (stats.wins ?? 0) + "／負け：" + (stats.losses ?? 0) +
+        "／両方到達：" + (stats.ambiguous ?? 0) + "／時間切れ：" + (stats.expired ?? 0) + "\n" +
+        "実測勝率：" + (stats.winRate == null ? "未検証" : stats.winRate + "%") +
+        "（両方到達・時間切れも不成功として計算）\n" +
+        "【最新の仮想トレード】\n" +
+        (paper ?
+          "方向：" + paper.direction + "／結果：" + (paper.result || "判定待ち") + "\n" +
+          "エントリー時刻：" + formatPaperTradeTime(paper.entryAt) + "\n" +
+          "判定期限：" + formatPaperTradeTime(paper.entryAt + 3 * 3600000) + "\n" +
+          "エントリー：" + num(paper.entryPrice) + "／利確：" + num(paper.takeProfit) + "／損切り：" + num(paper.stopLoss) + "\n"
+          : "記録なし\n") +
+        "現在の候補：エントリー " + num(result.entryPrice) +
+        "／利確 " + num(result.takeProfit) + "／損切り " + num(result.stopLoss) + "\n" +
+        "スプレッド控除後の設計RR：1:1.5（固定スプレッド仮定）\n" +
+        "通知：" + (result.notificationStatus || "未確認") + "\n" +
+        "見送り理由：" + ((result.skipReasons || []).join("／") || "なし") + "\n" +
         "更新：" + new Date(result.checkedAt).toLocaleString("ja-JP") +
-        (old || result.stale ? "（データが古いため確認が必要）" : "");
+        (old || result.stale ? "（データが古い）" : "");
       box.appendChild(row);
     }
     for (const problem of data.errors || []) {

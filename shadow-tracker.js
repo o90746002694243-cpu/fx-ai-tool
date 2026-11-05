@@ -1,5 +1,6 @@
 "use strict";
 const { outcome } = require("./strategy");
+const { snapshot } = require("./feature-audit");
 const { crossedMarketClosure } = require("./weekend-guard");
 const MAX_HISTORY = 300;
 const MAX_OPEN = 5;
@@ -36,7 +37,7 @@ function explainShadow(tracker, pair, a, gate, eligible, latest, now = Date.now(
   tracker.shadowLastBar[pair] = latest.endTime;
   tracker.shadowOpen.push({pair, category, direction:a.direction, entryPrice:a.entryPrice,
     takeProfit:a.takeProfit, stopLoss:a.stopLoss, score:a.score,
-    provisionalIndex:gate.estimatedScore, entryAt:latest.endTime,
+    provisionalIndex:gate.estimatedScore, features:snapshot(a), entryAt:latest.endTime,
     candleTime:latest.datetime, createdAt:now, maxAgeMs:MAX_AGE});
   return {recorded:true, reason:"recorded"};
 }
