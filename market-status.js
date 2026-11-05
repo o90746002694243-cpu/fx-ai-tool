@@ -1,6 +1,5 @@
 // Read-only status: opening the page never sends a new push or fetches market history.
 const { loadTracker, formatActualWinRate } = require("./trade-tracker");
-const simple = require("./simple-rule");
 exports.handler = async event => {
   const headers = {"Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store"};
   const {store, tracker} = await loadTracker(event);
@@ -11,19 +10,14 @@ exports.handler = async event => {
     const errors = await Promise.all(pairs.map(pair => store.get("market-error-" + pair.replace("/", "-"), {type:"json"})));
     const current = results.filter(Boolean).map(result => ({
       ...result,
-      ...(result.strategyVersion === simple.VERSION ? {simpleStats:simple.summary(tracker,result.pair)} : {}),
       // Read the authoritative tracker, rather than a cached market snapshot.
-      actualWinRate: result.strategyVersion === simple.VERSION ? (simple.summary(tracker, result.pair).completed ? simple.summary(tracker, result.pair).winRate + "%（" + simple.summary(tracker, result.pair).completed + "件）" : "未検証（0件）") : formatActualWinRate(tracker, result.pair),
+      actualWinRate: formatActualWinRate(tracker, result.pair),
       pendingCount: tracker.openSignals.filter(s => s.pair === result.pair).length,
       pendingSince: tracker.openSignals.find(s => s.pair === result.pair)?.createdAt || null,
       strategyStats: tracker.strategyStats?.[result.strategyVersion]?.[result.pair] || null,
       // Lifetime settled counts come from cumulative stats, not the capped history array.
       // The history count can decrease when old snapshots are pruned; it is NOT a lifetime total.
-      shadowRecordCounts: result.strategyVersion === simple.VERSION ? {
-        settledTotal:simple.summary(tracker,result.pair).completed,
-        pending:simple.summary(tracker,result.pair).pending,
-        retainedHistory:simple.summary(tracker,result.pair).history
-      } : {
+      shadowRecordCounts: {
         pending: (tracker.shadowOpen || []).filter(s => s.pair === result.pair).length,
         settledTotal: Object.values(tracker.shadowStats?.[result.pair] || {}).reduce((sum, bucket) =>
           sum + ["wins", "losses", "ambiguous", "expired", "weekendExcluded"].reduce((n, key) =>
@@ -31,7 +25,7 @@ exports.handler = async event => {
         retainedHistory: (tracker.shadowHistory || []).filter(s => s.pair === result.pair).length
       },
       // Current paper-trade position or latest settled one; never mislabel a candidate as recorded.
-      paperTrade: result.strategyVersion === simple.VERSION ? simple.summary(tracker,result.pair).paperTrade : (tracker.shadowOpen || []).filter(s => s.pair === result.pair).slice(-1)[0] ||
+      paperTrade: (tracker.shadowOpen || []).filter(s => s.pair === result.pair).slice(-1)[0] ||
         (tracker.shadowHistory || []).filter(s => s.pair === result.pair).slice(-1)[0] || null
     }));
     const latestErrors = errors.filter(Boolean).filter(error => {

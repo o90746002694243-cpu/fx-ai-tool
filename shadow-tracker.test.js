@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {trackShadow,explainShadow,settleShadows,shadowSummary}=require('../shadow-tracker');
+const {trackShadow,explainShadow,settleShadows,shadowSummary}=require('../netlify/functions/shadow-tracker');
 const pair='USD/JPY';
 const start=Date.UTC(2026,9,21,0,15);
 const bar={endTime:start,datetime:'2026-10-21 00:00:00'};
