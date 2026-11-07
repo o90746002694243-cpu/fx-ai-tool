@@ -13,6 +13,7 @@ const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker"
 const parallel = require("./parallel-strategies");
 const { audit: auditFeatures } = require("./feature-audit");
 const { notificationId } = require("./notification-id");
+const { getPushConfig } = require("./push-config");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
 async function loadImportantEvents() {
@@ -117,6 +118,8 @@ const {
     const interval = "15min";
     const targetScore = 70; // provisional 60-index starts at 70 score, not the old 90 threshold
     const results = [];
+    const pushConfig = getPushConfig();
+    console.log("FX push configuration:", JSON.stringify({configured:pushConfig.configured, targetCount:pushConfig.subscriptions.length, invalidCount:pushConfig.invalidCount, ready:pushConfig.ready, apiKeyPresent:Boolean(process.env.ONESIGNAL_API_KEY)}));
 
     const pairErrors = [];
     for (const [pairIndex, pair] of pairsToCheck.entries()) {
@@ -135,7 +138,7 @@ const {
     const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
     const data = await response.json();
 
-    if (!response.ok || data.status === "error") {
+    if (!response.ok || data.status === "error" || data.code && data.status !== "ok") {
       throw new Error(
         data.message ||
         "相場データの取得に失敗しました。"
@@ -265,6 +268,8 @@ const actualWinRateText =
     const decisionAt = new Date().toISOString();
     let notificationSent = false;
     let notificationErrorText = null;
+    if (shouldNotify && !oneSignalKey) notificationErrorText = "OneSignal APIキー未設定";
+    else if (shouldNotify && !pushConfig.ready) notificationErrorText = "OneSignal送信先設定が無効";
     const skipReasons = [];
     if (!signalEligible) {
       if (!probabilityPassed) skipReasons.push("暫定60%指数未満（" + provisional.estimatedScore + "）");
@@ -286,7 +291,8 @@ const actualWinRateText =
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
-    if (shouldNotify && !isDuplicate && oneSignalKey) {
+    if (shouldNotify && !pushConfig.ready) skipReasons.push("OneSignal送信先設定が無効");
+    if (shouldNotify && !isDuplicate && oneSignalKey && pushConfig.ready) {
       try {
 
         const notificationResponse = await fetch(
@@ -297,14 +303,12 @@ const actualWinRateText =
              "Content-Type": "application/json; charset=utf-8",
              "Authorization": "Key " + oneSignalKey,
            },
+           signal: AbortSignal.timeout(12000),
            body: JSON.stringify({
-              app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
+              app_id: pushConfig.appId,
               idempotency_key: notificationId(STRATEGY_VERSION, pair, direction, latest.datetime),
               target_channel: "push",
-              include_subscription_ids: [
-  "f7a8344c-34f9-44f8-8bb5-03f97a2fd645",
-  "92a734ef-c592-4c77-b214-942cf28ce03a"
-],
+              include_subscription_ids: pushConfig.subscriptions,
              
               headings: {
                 en: "FX AI Tool 🚨"
@@ -346,8 +350,11 @@ const actualWinRateText =
           }
         );
 
-        const notificationResult =
-          await notificationResponse.json();
+        // OneSignal can return non-JSON errors (proxy or transient outage).
+        const notificationBody = await notificationResponse.text();
+        let notificationResult;
+        try { notificationResult = JSON.parse(notificationBody); }
+        catch { throw new Error("OneSignal returned non-JSON HTTP " + notificationResponse.status); }
         
         // HTTP 200 alone does not mean OneSignal accepted any recipients.
         const recipientCount = Number(notificationResult?.recipients);
@@ -405,6 +412,9 @@ const actualWinRateText =
       alreadyTracking,
       importantEvent,
       storeAvailable: Boolean(tradeStore),
+      pushTargetCount: pushConfig.subscriptions.length,
+      pushTargetConfigured: pushConfig.configured,
+      pushConfigValid: pushConfig.ready,
       stopWidthPips: Math.abs(entryPrice - stopLoss) / 0.01,
       rsi,
       isRsiExtreme,
@@ -496,7 +506,10 @@ const actualWinRateText =
           candidateEligible, probabilityPassed, eligible: signalEligible,
           dataFresh: !stale, reopeningBlocked, quietHoursBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
-          pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
+          pushAttempted: shouldNotify && !isDuplicate && !!oneSignalKey && pushConfig.ready,
+          pushAccepted: notificationSent, pushTargetCount: pushConfig.subscriptions.length,
+          pushTargetConfigured: pushConfig.configured, pushConfigValid: pushConfig.ready,
+          pushApiKeyPresent: !!oneSignalKey,
           candleTime: latest.datetime, candleAgeSeconds, m5Status, m5Error, recordedAt: decisionAt
         },
 
@@ -556,10 +569,15 @@ const actualWinRateText =
 if (tradeStore) {
   for (const result of results) {
     const value = JSON.parse(result.body);
-    await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
-      ...value, checkedAt: new Date().toISOString()
-    });
-    await tradeStore.delete("market-error-" + value.pair.replace("/", "-"));
+    try {
+      await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
+        ...value, checkedAt: new Date().toISOString()
+      });
+      await tradeStore.delete("market-error-" + value.pair.replace("/", "-"));
+    } catch (snapshotError) {
+      console.error("FX snapshot persistence failed:", value.pair, snapshotError);
+      pairErrors.push({pair:value.pair, error:"監視結果の保存に失敗しました"});
+    }
   }
 }
 const tradeSaved = await saveTracker(tradeStore, tracker);

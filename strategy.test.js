@@ -119,6 +119,7 @@ test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
     const e=evaluate(c,null,pair);
     assert(e);
     assert(e.netRiskPips>0);
+    if(e.direction!=="見送り") assert(e.riskReward>=1.5, `${pair}: net RR ${e.riskReward}`);
     assert(e.netRewardPips<Math.abs(e.takeProfit-e.entryPrice)/0.01);
     assert(e.breakevenWinRate>0);
     if(e.direction==='買い')assert(e.takeProfit>e.entryPrice&&e.stopLoss<e.entryPrice);

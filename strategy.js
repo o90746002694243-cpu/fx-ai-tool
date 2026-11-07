@@ -338,6 +338,9 @@ const spreadPrice=settings.spreadPips*0.01;
 const minRange= settings.minAtrPips*0.01;
 const maxRange=currentPrice*0.003;
 const safeRange=atr===null?0:Math.min(atr*1.25,maxRange);
+// Net RR must include spread on both reward and risk sides.
+// Add a tiny numerical buffer to prevent floating-point rounding below 1.5.
+const targetGrossReward = 1.5 * (safeRange + spreadPrice) + spreadPrice + 0.000001;
 const isRangeTooSmall=atr===null || atr<minRange;
 const isWeakTrend=adx===null || adx<settings.adxMin;
 const candleSignal=candlePattern(candles);
@@ -352,7 +355,7 @@ if (direction === "買い") {
 
   takeProfit =
     currentPrice +
-    safeRange * 1.5;
+    targetGrossReward;
 }
 
 if (direction === "売り") {
@@ -360,7 +363,7 @@ if (direction === "売り") {
 
   takeProfit =
     currentPrice -
-    safeRange * 1.5;
+    targetGrossReward;
 }
 
 const grossReward=Math.abs(takeProfit-entryPrice);
