@@ -116,7 +116,7 @@ const {
         const pairsToCheck = pairs;
 
     const interval = "15min";
-    const targetScore = 70; // provisional 60-index starts at 70 score, not the old 90 threshold
+    const targetScore = 70; // Kept consistent with strategy.evaluate() and probability.qualifies().
     const results = [];
     const pushConfig = getPushConfig();
     console.log("FX push configuration:", JSON.stringify({configured:pushConfig.configured, targetCount:pushConfig.subscriptions.length, invalidCount:pushConfig.invalidCount, ready:pushConfig.ready, apiKeyPresent:Boolean(process.env.ONESIGNAL_API_KEY)}));
@@ -228,6 +228,10 @@ const {
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
     const signalEligible = candidateEligible && probabilityPassed; // Single notification eligibility gate; chart AI is independent, not an override.
+    if (analysis.eligible !== candidateEligible) {
+      console.error("FX eligibility mismatch:", JSON.stringify({pair, strategyEligible:analysis.eligible, candidateEligible, score, riskReward}));
+      throw new Error("通知の判定基準が一致しません。通知を安全のため停止しました。");
+    }
     const shadowDiagnostic = canStartSixHourTrade()
       ? explainShadow(tracker, pair, analysis, provisional, signalEligible, latest)
       : {recorded:false, reason:"marketSessionGuard"};
@@ -273,7 +277,7 @@ const actualWinRateText =
     const skipReasons = [];
     if (!signalEligible) {
       if (!probabilityPassed) skipReasons.push("暫定60%指数未満（" + provisional.estimatedScore + "）");
-      if (score < 70) skipReasons.push("スコア不足：" + score + "点");
+      if (score < targetScore) skipReasons.push("スコア不足：" + score + "点");
       if (direction === "見送り") skipReasons.push("売買方向が不明");
       if (analysis.isRsiExtreme) skipReasons.push("RSI極端値");
       if (analysis.isSharpMove) skipReasons.push("急変動");
@@ -285,13 +289,14 @@ const actualWinRateText =
       if (!skipReasons.length) skipReasons.push("その他の通知条件未達");
     }
     if (stale) skipReasons.push("ローソク足データが古い（仮想実績も新規登録しない）");
-    if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり");
+    if (alreadyTracking) skipReasons.push("同一通貨の未決済シグナルあり（3時間/旧記録6時間の決済・期限判定対象）");
     if (reopeningBlocked) skipReasons.push("週明け市場再開後90分の新規通知停止");
     if (!pushGate.allowed) skipReasons.push(pushGate.reason);
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
     if (shouldNotify && !pushConfig.ready) skipReasons.push("OneSignal送信先設定が無効");
+    console.log("FX notification gate:", JSON.stringify({pair, strategyEligible:analysis.eligible, candidateEligible, provisionalIndex:provisional.estimatedScore, probabilityPassed, riskReward, netRewardPips:analysis.netRewardPips, existingOpenTrade:alreadyTracking, eligible:signalEligible, shouldNotify, skipReasons}));
     if (shouldNotify && !isDuplicate && oneSignalKey && pushConfig.ready) {
       try {
 

@@ -385,17 +385,14 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   };
   const higherAligned = higherTimeframes.h1 === direction && higherTimeframes.h4 === direction;
   const eligible =
-  score >= 90 &&
+  score >= 70 &&
   direction !== "見送り" &&
   !isRsiExtreme &&
   !isSharpMove &&
-  safeRange > 0 &&
   !isRangeTooSmall &&
-  !isWeakTrend &&
   !isCandleOpposed &&
   candleSignal!=="十字線" &&
-  netReward>0 && riskReward>=1.5 &&
-  grossReward >= spreadPrice*3;
+  netReward>0 && riskReward>=1.5;
    return { chartPattern, candleSignal, atr, atrPips, adx, spreadPips:settings.spreadPips,
     netRewardPips:netReward/0.01, netRiskPips:netRisk/0.01, breakevenWinRate,
     hypotheticalExpectancyPips, isWeakTrend, isCandleOpposed, isRangeTooSmall, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
