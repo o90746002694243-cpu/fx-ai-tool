@@ -1174,7 +1174,22 @@ async function monitorMarket() {
       const stats = result.simpleStats || {};
       const paper = result.paperTrade;
       const num = n => Number.isFinite(Number(n)) ? Number(n).toFixed(3) : "-";
+      // Never present saved results from an older strategy as current decisions.
+      // A Published deployment does not prove the scheduled function has run.
+      const versionMatches = result.snapshotVersionMatches === true &&
+        result.strategyVersion === data.activeStrategyVersion;
+      if (!versionMatches) {
+        row.style.color = "#ffcbac";
+        row.textContent = result.pair + "：旧バージョンの監視結果（通知判定は未確認）\n" +
+          "保存結果の方式：" + (result.strategyVersion || "不明") + "\n" +
+          "公開中の方式：" + (data.activeStrategyVersion || "不明") + "\n" +
+          "この見送り理由は最新版の判定結果ではありません。次回の定期監視後も変わらなければNetlifyのFunctionログを確認してください。\n" +
+          "保存日時：" + (result.checkedAt ? new Date(result.checkedAt).toLocaleString("ja-JP") : "不明");
+        box.appendChild(row);
+        continue;
+      }
       row.textContent = result.pair + "：" + result.direction + "\n" +
+        "稼働中の判定：" + result.strategyVersion + "／通知基準：" + (result.targetScore ?? "未記録") + "点以上\n" +
         "方式：" + (result.notificationMode || "旧版") + "\n" +
         "【新方式・実測結果】\n" +
         "確定：" + (stats.completed ?? 0) + "件／判定待ち：" + (stats.pending ?? 0) + "件\n" +
