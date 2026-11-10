@@ -1,7 +1,7 @@
 "use strict";
 const assert=require("node:assert/strict");
 const {test}=require("node:test");
-const p=require("../netlify/functions/parallel-strategies");
+const p=require("../parallel-strategies");
 const now=Date.parse("2026-10-28T03:15:00Z"), barEnd=now-15000;
 const a={atr:.08,sma5:151.2,sma20:151.0,rsi:53,adx:25,spreadPips:.3};
 const bar={close:151.2,datetime:"2026-10-28 03:00:00",endTime:barEnd};

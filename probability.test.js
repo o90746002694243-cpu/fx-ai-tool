@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const p=require('../netlify/functions/probability');
+const p=require('../probability');
 test('no invented probability on zero samples',()=>{
  const r=p.estimateProbability({},'USD/JPY',{direction:'買い',higherAligned:true,score:95});
  assert.equal(r.empiricalWinRate,null);assert.equal(r.isValidated,false);

@@ -1,10 +1,10 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {crossedMarketClosure,canStartSixHourTrade}=require('../netlify/functions/weekend-guard');
-const {settlePairSignals}=require('../netlify/functions/trade-tracker');
-const {settleShadows}=require('../netlify/functions/shadow-tracker');
-const {settleCandidates}=require('../netlify/functions/probability');
-const {STRATEGY_VERSION}=require('../netlify/functions/strategy');
+const {crossedMarketClosure,canStartSixHourTrade}=require('../weekend-guard');
+const {settlePairSignals}=require('../trade-tracker');
+const {settleShadows}=require('../shadow-tracker');
+const {settleCandidates}=require('../probability');
+const {STRATEGY_VERSION}=require('../strategy');
 const ts=x=>Date.parse(x);
 test('Friday late trade rejected and Sunday reopen allowed only after six trading hours',()=>{
  assert.equal(canStartSixHourTrade(ts('2026-10-23T14:00:00Z')),true);

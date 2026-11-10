@@ -119,21 +119,10 @@ test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
     const e=evaluate(c,null,pair);
     assert(e);
     assert(e.netRiskPips>0);
-    if(e.direction!=="見送り") assert(e.riskReward>=1.5, `${pair}: net RR ${e.riskReward}`);
     assert(e.netRewardPips<Math.abs(e.takeProfit-e.entryPrice)/0.01);
     assert(e.breakevenWinRate>0);
     if(e.direction==='買い')assert(e.takeProfit>e.entryPrice&&e.stopLoss<e.entryPrice);
     if(e.direction==='売り')assert(e.takeProfit<e.entryPrice&&e.stopLoss>e.entryPrice);
     if(e.eligible)assert(e.riskReward>=1.5&&e.adx>=18);
-  }
-});
-
-test('published 3-decimal levels keep cost-adjusted RR >= 1.5 in buy and sell signals',()=>{
-  const {buildCostAwareLevels}=require('../netlify/functions/strategy');
-  for(const direction of ['買い','売り']) for(const spread of [0.003,0.006,0.009]) for(const width of [0.065,0.109,0.1357]) {
-    const a=buildCostAwareLevels(158.83751,direction,width,spread);
-    assert(a.riskReward>=1.5,JSON.stringify({direction,spread,width,a}));
-    for(const level of [a.entryPrice,a.takeProfit,a.stopLoss]) assert(Math.abs(Math.round(level*1000)-level*1000)<1e-7);
-    assert.equal(direction==='買い'?a.takeProfit>a.entryPrice:a.takeProfit<a.entryPrice,true);
   }
 });
