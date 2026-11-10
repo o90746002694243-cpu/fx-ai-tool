@@ -5,16 +5,15 @@ const { crossedMarketClosure } = require("./weekend-guard");
 const { evaluate, outcome } = require("./strategy");
 const MIN_COMPARABLE = 30;
 function qualifies(a) {
-  return a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
-    !a.isRangeTooSmall && !a.isCandleOpposed &&
-    a.candleSignal !== "十字線" && a.netRewardPips > 0 &&
-    a.riskReward >= 1.5 && a.score >= 70;
+  return a && a.direction !== "見送り" && !a.isRsiExtreme &&
+    !a.isRangeTooSmall && a.netRewardPips > 0 &&
+    a.riskReward >= 1.5 && a.score >= 65;
 }
 // Broader observation pool: preserve paper-only research below the push RR floor.
 function qualifiesCandidate(a) {
-  return !!a && a.direction !== "見送り" && !a.isRsiExtreme && !a.isSharpMove &&
-    !a.isRangeTooSmall && !a.isCandleOpposed && a.candleSignal !== "十字線" &&
-    a.netRewardPips > 0 && a.riskReward >= 1.2 && a.score >= 70;
+  return !!a && a.direction !== "見送り" && !a.isRsiExtreme &&
+    !a.isRangeTooSmall && a.netRewardPips > 0 &&
+    a.riskReward >= 1.2 && a.score >= 65;
 }
 function matchGroup(a) {
   return a.direction + "|" + (a.score >= 90 ? "high" : a.score >= 80 ? "medium" : "low");

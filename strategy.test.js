@@ -111,7 +111,7 @@ test('ATR and ADX use only completed historical candles and are finite',()=>{
   assert.equal(atrAdx(bars.slice(0,20)).adx,null);
   assert.equal(typeof candlePattern(bars),'string');
   assert(PAIR_SETTINGS['NZD/JPY'].spreadPips>PAIR_SETTINGS['USD/JPY'].spreadPips);
-  assert.equal(STRATEGY_VERSION,'mtf-v4-atr-adx-cost');
+  assert.equal(STRATEGY_VERSION,'mtf-v5-relaxed-65');
 });
 test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
   const c=normalizeCandles(rows(500),Infinity);

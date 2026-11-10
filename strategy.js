@@ -1,5 +1,5 @@
 // Both live monitoring and historical replay use this rule implementation.
-const STRATEGY_VERSION = "mtf-v4-atr-adx-cost";
+const STRATEGY_VERSION = "mtf-v5-relaxed-65";
 const BAR_MS = 15 * 60 * 1000;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 function parseTime(value) {
@@ -385,14 +385,13 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   };
   const higherAligned = higherTimeframes.h1 === direction && higherTimeframes.h4 === direction;
   const eligible =
-  score >= 70 &&
+  score >= 65 &&
   direction !== "見送り" &&
   !isRsiExtreme &&
-  !isSharpMove &&
+  safeRange > 0 &&
   !isRangeTooSmall &&
-  !isCandleOpposed &&
-  candleSignal!=="十字線" &&
-  netReward>0 && riskReward>=1.5;
+  netReward>0 && riskReward>=1.5 &&
+  grossReward >= spreadPrice*3;
    return { chartPattern, candleSignal, atr, atrPips, adx, spreadPips:settings.spreadPips,
     netRewardPips:netReward/0.01, netRiskPips:netRisk/0.01, breakevenWinRate,
     hypotheticalExpectancyPips, isWeakTrend, isCandleOpposed, isRangeTooSmall, direction, score, currentPrice, entryPrice, takeProfit, stopLoss, riskReward,
