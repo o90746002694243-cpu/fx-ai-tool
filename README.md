@@ -40,3 +40,11 @@ GitHubリポジトリのルートをこのZIPの中身で完全に置き換え�
 2. Netlify Environment variablesの `ONESIGNAL_API_KEY` と `TWELVE_DATA_API_KEY` が設定されていることを確認。必要なら `ONESIGNAL_SUBSCRIPTION_IDS` に現在使っている端末の購読IDを設定して再デプロイ。
 3. FX市場営業中に Netlify Function logs の `FX push configuration:` 、`FX feed diagnostic:` 、`FX monitor result:` 、`FX pair monitor failed:` を確認。
 4. 画面で `notificationReason` / `skipReasons` / `monitoringHealth` を確認。送信受理なのに端末に届かない場合は、端末のOneSignal購読状態・通知許可を確認。
+
+
+## 2026-11-11 RR / RSI 通知判定修正
+- 新戦略バージョン: `mtf-v6-rr-rounded-rsi-reference`（旧結果は保持）。
+- 65点、スプレッド控除後RR1:1.5、ATR最低値幅、重要指標・重複・市場時間制限を維持。
+- エントリー・利確・損切りを小数第3位にそろえ、表示価格でも控除後RR1:1.5を下回らないよう利確を外側に調整。
+- RSI極端値は画面に表示する参考情報とし、一律通知停止には使わない。RSI由来スコアは維持。
+- 仮想トレード・検証統計は旧バージョンと分けて保存。通知件数や実勝率の改善は未検証。

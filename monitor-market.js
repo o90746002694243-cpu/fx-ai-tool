@@ -274,7 +274,6 @@ const actualWinRateText =
     if (!signalEligible) {
       if (score < 65) skipReasons.push("スコア不足：" + score + "点");
       if (direction === "見送り") skipReasons.push("売買方向が不明");
-      if (analysis.isRsiExtreme) skipReasons.push("RSI極端値");
       if (analysis.isRangeTooSmall) skipReasons.push("値幅不足");
       // ADX is a reference factor; not an automatic veto.
       if (!(analysis.netRewardPips > 0 && riskReward >= 1.5)) skipReasons.push("コスト控除後の利益・RR不足");

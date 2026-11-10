@@ -5,13 +5,13 @@ const { crossedMarketClosure } = require("./weekend-guard");
 const { evaluate, outcome } = require("./strategy");
 const MIN_COMPARABLE = 30;
 function qualifies(a) {
-  return a && a.direction !== "見送り" && !a.isRsiExtreme &&
+  return a && a.direction !== "見送り" &&
     !a.isRangeTooSmall && a.netRewardPips > 0 &&
     a.riskReward >= 1.5 && a.score >= 65;
 }
 // Broader observation pool: preserve paper-only research below the push RR floor.
 function qualifiesCandidate(a) {
-  return !!a && a.direction !== "見送り" && !a.isRsiExtreme &&
+  return !!a && a.direction !== "見送り" &&
     !a.isRangeTooSmall && a.netRewardPips > 0 &&
     a.riskReward >= 1.2 && a.score >= 65;
 }

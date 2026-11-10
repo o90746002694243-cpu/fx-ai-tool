@@ -8,3 +8,5 @@ test('a score of 50 must not qualify',()=>assert.equal(qualifies({...base,score:
 
 test('score 65 and opposing candle / sharp move are allowed when RR is valid',()=>assert.equal(qualifies({...base,score:65,riskReward:1.5,isSharpMove:true,isCandleOpposed:true,candleSignal:"十字線"}),true));
 test('score 64 is rejected',()=>assert.equal(qualifies({...base,score:64,riskReward:1.5}),false));
+
+test('RSI extreme is informative, not an automatic push veto',()=>assert.equal(qualifies({...base,riskReward:1.5,isRsiExtreme:true}),true));

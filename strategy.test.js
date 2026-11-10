@@ -111,7 +111,7 @@ test('ATR and ADX use only completed historical candles and are finite',()=>{
   assert.equal(atrAdx(bars.slice(0,20)).adx,null);
   assert.equal(typeof candlePattern(bars),'string');
   assert(PAIR_SETTINGS['NZD/JPY'].spreadPips>PAIR_SETTINGS['USD/JPY'].spreadPips);
-  assert.equal(STRATEGY_VERSION,'mtf-v5-relaxed-65');
+  assert.equal(STRATEGY_VERSION,'mtf-v6-rr-rounded-rsi-reference');
 });
 test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
   const c=normalizeCandles(rows(500),Infinity);
@@ -125,5 +125,15 @@ test('cost-aware risk reward and TP / SL stay directionally consistent',()=>{
     if(e.direction==='買い')assert(e.takeProfit>e.entryPrice&&e.stopLoss<e.entryPrice);
     if(e.direction==='売り')assert(e.takeProfit<e.entryPrice&&e.stopLoss>e.entryPrice);
     if(e.eligible)assert(e.riskReward>=1.5&&e.adx>=18);
+  }
+});
+
+test('published 3-decimal levels keep cost-adjusted RR >= 1.5 in buy and sell signals',()=>{
+  const {buildCostAwareLevels}=require('../netlify/functions/strategy');
+  for(const direction of ['買い','売り']) for(const spread of [0.003,0.006,0.009]) for(const width of [0.065,0.109,0.1357]) {
+    const a=buildCostAwareLevels(158.83751,direction,width,spread);
+    assert(a.riskReward>=1.5,JSON.stringify({direction,spread,width,a}));
+    for(const level of [a.entryPrice,a.takeProfit,a.stopLoss]) assert(Math.abs(Math.round(level*1000)-level*1000)<1e-7);
+    assert.equal(direction==='買い'?a.takeProfit>a.entryPrice:a.takeProfit<a.entryPrice,true);
   }
 });

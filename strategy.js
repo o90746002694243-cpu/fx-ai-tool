@@ -1,5 +1,5 @@
 // Both live monitoring and historical replay use this rule implementation.
-const STRATEGY_VERSION = "mtf-v5-relaxed-65";
+const STRATEGY_VERSION = "mtf-v6-rr-rounded-rsi-reference";
 const BAR_MS = 15 * 60 * 1000;
 const EXPIRY_MS = 6 * 60 * 60 * 1000;
 function parseTime(value) {
@@ -170,6 +170,24 @@ function candlePattern(candles) {
   if(upper>body*2.5 && lower<body)return "上ヒゲ反落";
   return "なし";
 }
+function buildCostAwareLevels(price,direction,range,spreadPrice,targetRR=1.5) {
+  const round3=x=>Math.round(x*1000)/1000;
+  const entryPrice=round3(price);
+  if (!Number.isFinite(range) || range<=0 || !Number.isFinite(spreadPrice) || spreadPrice<0 || !["買い","売り"].includes(direction)) {
+    return {entryPrice,takeProfit:entryPrice,stopLoss:entryPrice,netReward:0,netRisk:0,riskReward:0};
+  }
+  const stopLoss=round3(entryPrice+(direction==="買い"?-range:range));
+  const grossRisk=Math.abs(entryPrice-stopLoss);
+  const netRisk=grossRisk+spreadPrice;
+  if(grossRisk<=0 || netRisk<=0) return {entryPrice,takeProfit:entryPrice,stopLoss,netReward:0,netRisk,riskReward:0};
+  const requiredGross=targetRR*netRisk+spreadPrice;
+  // One extra 0.001 JPY step covers binary floating-point boundary effects.
+  const steps=Math.ceil((requiredGross-1e-10)*1000)+1;
+  const takeProfit=round3(entryPrice+(direction==="買い"?steps:-steps)/1000);
+  const netReward=Math.abs(takeProfit-entryPrice)-spreadPrice;
+  const riskReward=netReward/netRisk;
+  return {entryPrice,takeProfit,stopLoss,netReward,netRisk,riskReward};
+}
 function evaluate(candles, higher = null, pair = "USD/JPY") {
   if (candles.length < 21) return null;
     const closes = candles.map(c => c.close);
@@ -329,48 +347,24 @@ const isSharpMove =
   latestBody >= averageBody * 1.8;
 
 // ===== エントリー・利確・損切り自動計算 =====
-const entryPrice = currentPrice;
-
+// All order levels are fixed to 0.001 JPY, the same precision shown in alerts.
+// Choose TP outward so that displayed prices retain net RR >= 1.5 after costs.
 const settings=PAIR_SETTINGS[pair] || PAIR_SETTINGS["USD/JPY"];
 const {atr,adx}=atrAdx(candles);
 const atrPips=atr===null?null:atr/0.01;
 const spreadPrice=settings.spreadPips*0.01;
-const minRange= settings.minAtrPips*0.01;
+const minRange=settings.minAtrPips*0.01;
 const maxRange=currentPrice*0.003;
 const safeRange=atr===null?0:Math.min(atr*1.25,maxRange);
-// Net RR must include spread on both reward and risk sides.
-// Add a tiny numerical buffer to prevent floating-point rounding below 1.5.
-const targetGrossReward = 1.5 * (safeRange + spreadPrice) + spreadPrice + 0.000001;
 const isRangeTooSmall=atr===null || atr<minRange;
 const isWeakTrend=adx===null || adx<settings.adxMin;
 const candleSignal=candlePattern(candles);
 const isCandleOpposed=(direction==="買い" && (candleSignal==="弱気包み足" || candleSignal==="上ヒゲ反落")) ||
   (direction==="売り" && (candleSignal==="強気包み足" || candleSignal==="下ヒゲ反発"));
-
-let takeProfit = currentPrice;
-let stopLoss = currentPrice;
-
-if (direction === "買い") {
-  stopLoss = currentPrice - safeRange;
-
-  takeProfit =
-    currentPrice +
-    targetGrossReward;
-}
-
-if (direction === "売り") {
-  stopLoss = currentPrice + safeRange;
-
-  takeProfit =
-    currentPrice -
-    targetGrossReward;
-}
-
+const levels=buildCostAwareLevels(currentPrice,direction === "見送り" ? "買い" : direction,safeRange,spreadPrice);
+const {entryPrice,takeProfit,stopLoss,netReward,netRisk}=levels;
 const grossReward=Math.abs(takeProfit-entryPrice);
-const grossRisk=Math.abs(entryPrice-stopLoss);
-const netReward=grossReward-spreadPrice;
-const netRisk=grossRisk+spreadPrice;
-const riskReward=direction==="見送り" || !netRisk?0:netReward/netRisk;
+const riskReward=direction === "見送り" ? 0 : levels.riskReward;
 const breakevenWinRate=netReward>0?100*netRisk/(netRisk+netReward):100;
 // Illustration at a stated 60% win probability; NOT an estimated actual win rate.
 const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
@@ -387,7 +381,6 @@ const hypotheticalExpectancyPips=(0.6*netReward-0.4*netRisk)/0.01;
   const eligible =
   score >= 65 &&
   direction !== "見送り" &&
-  !isRsiExtreme &&
   safeRange > 0 &&
   !isRangeTooSmall &&
   netReward>0 && riskReward>=1.5 &&
@@ -444,4 +437,4 @@ function backtest(candles, pair = "USD/JPY") {
     text:formatSummary(stats),
     assumptions:"確定足終値で仮想約定。6時間以内のTP/SLを判定。両方到達・期限切れも分母に含む。スプレッドは通知判定の概算のみ反映。バックテスト損益・滑り・過去の経済指標回避は未反映。実運用ではなく参考検証。"};
 }
-module.exports = {PAIR_SETTINGS,atrAdx,candlePattern,STRATEGY_VERSION,BAR_MS,EXPIRY_MS,normalizeCandles,aggregate,trend,evaluate,outcome,summarize,formatSummary,backtest};
+module.exports = {buildCostAwareLevels,PAIR_SETTINGS,atrAdx,candlePattern,STRATEGY_VERSION,BAR_MS,EXPIRY_MS,normalizeCandles,aggregate,trend,evaluate,outcome,summarize,formatSummary,backtest};
