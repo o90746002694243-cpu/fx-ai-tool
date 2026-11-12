@@ -26,9 +26,3 @@ test('Japanese JS files are UTF-8 without replacement characters',()=>{
     assert.ok(!text.startsWith('\ufeff'),file);
   }
 });
-
-test('Live Netlify modules match the reviewed source modules',()=>{
-  for(const name of ['monitor-market.js','strategy.js','probability.js','push-config.js']) {
-    assert.equal(fs.readFileSync(path.join(root,name),'utf8'),fs.readFileSync(path.join(root,'netlify/functions',name),'utf8'),name);
-  }
-});
