@@ -1,0 +1,334 @@
+exports.handler = async function(event) {
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: corsHeaders(),
+      body: "ok"
+    };
+  }
+
+  if (event.httpMethod !== "POST") {
+    return jsonResponse(405, {
+      error: "Method Not Allowed"
+    });
+  }
+
+  try {
+    const body = JSON.parse(event.body || "{}");
+
+    const {
+      image,
+      pair = "不明",
+      price = "不明",
+      timeframe = "不明",
+      risk = "medium",
+      guidelines = [],
+    } = body;
+
+    if (!image) {
+      return jsonResponse(400, {
+        error: "チャート画像がありません。"
+      });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return jsonResponse(500, {
+        error: "OPENAI_API_KEY が設定されていません。"
+      });
+    }
+
+    const guidelineText =
+  Array.isArray(guidelines) && guidelines.length > 0
+    ? guidelines
+        .map(g => `${"⭐".repeat(Number(g.stars) || 0)} ${g.text}`)
+        .join("\n")
+    : "該当する指針なし";
+
+    const prompt = `
+あなたはFXチャート分析アシスタントです。
+【指針表】
+${guidelineText}
+
+指針の扱い：
+- ⭐⭐⭐ は強く重視してください。
+- ⭐⭐ は補助材料として重視してください。
+- 指針がチャートの方向性と一致する場合は、判断の信頼度を上げる材料にしてください。
+- 指針とチャートが矛盾する場合は、無理に指針を優先せず、チャートを優先してください。
+- 指針だけを理由に勝率を不自然に高くしないでください。
+- 判断理由の最後に、今回使用した指針を「反映した指針：○○」の形式で必ず明記してください。指針がない場合は「反映した指針：なし」と明記してください。
+添付されたチャート画像を最優先で読み取り、短期トレード向けに分析してください。
+
+重要:
+- 通貨ペア、現在価格、時間足は、まず画像内の表示から読み取ってください。
+- 入力値 pair / price / timeframe は補助情報です。画像の表示が読めるなら画像を優先してください。
+- 画像で確認できない項目だけ "不明" にしてください。
+- 現在価格はチャート右端の現在値、価格ラベル、最新ローソク足付近の数値を優先してください。
+- 時間足は 1分足、5分足、15分足、1時間足、4時間足、日足 などの表示から判断してください。
+- 通貨ペアは AUD/JPY、NZD/JPY、CAD/JPY、USD/JPY、EUR/JPY など画像内の銘柄名から判断してください。
+- 読み取れない情報を勝手に作らないでください。
+
+分析ルール:
+- ローソク足、移動平均線、直近高値安値、サポート、レジスタンス、勢いを重視してください。
+- 方向は "買い" / "売り" / "見送り" のどれかにしてください。
+- エントリー、利確、損切り、買い待ち価格、売り待ち価格は、可能なら具体的価格で返してください。
+- 「買い」の場合、利確目安はエントリー目安より上、損切り目安はエントリー目安より下にしてください。
+- 「売り」の場合、利確目安はエントリー目安より下、損切り目安はエントリー目安より上にしてください。
+- 「見送り」の場合でも価格を出すなら、想定方向と利確・損切りの上下関係を必ず一致させてください。
+- 上下関係が矛盾する価格は絶対に出さないでください。
+- 買い待ち価格は、買い方向でエントリーを検討する価格として設定してください。
+- 売り待ち価格は、売り方向でエントリーを検討する価格として設定してください。
+- 買い待ち価格と売り待ち価格を、利確目安や損切り目安と同じ値にしないでください。
+- 買い待ち価格・売り待ち価格は、サポート・レジスタンスや直近高値・安値を参考に自然な価格を設定してください。
+- 買いなら原則「損切り < エントリー < 利確」。
+- 売りなら原則「利確 < エントリー < 損切り」。
+- 判断根拠が弱い場合は無理に売買を勧めず "見送り" にしてください。
+- score は 0〜100 の整数。
+- risk は "low" / "medium" / "high" のいずれかにしてください。
+- triggerReason は「どの価格を超えたら/割れたら発動するか」を短くわかりやすく書いてください。
+- reason は日本語で2〜5文程度にまとめてください。
+
+補助入力:
+- pair: ${pair}
+- price: ${price}
+- timeframe: ${timeframe}
+- economic risk: ${risk}
+`;
+
+    const schema = {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        pair: {
+          type: "string"
+        },
+        price: {
+          type: "string"
+        },
+        timeframe: {
+          type: "string"
+        },
+        direction: {
+          type: "string",
+          enum: ["買い", "売り", "見送り"]
+        },
+        trend: {
+          type: "string"
+        },
+        score: {
+          type: "number"
+        },
+        entry: {
+          type: "string"
+        },
+        takeProfit: {
+          type: "string"
+        },
+        stopLoss: {
+          type: "string"
+        },
+        buyTrigger: {
+          type: "string"
+        },
+        sellTrigger: {
+          type: "string"
+        },
+        triggerReason: {
+          type: "string"
+        },
+        support: {
+          type: "string"
+        },
+        resistance: {
+          type: "string"
+        },
+        reason: {
+          type: "string"
+        },
+        risk: {
+          type: "string",
+          enum: ["low", "medium", "high"]
+        }
+      },
+      required: [
+        "pair",
+        "price",
+        "timeframe",
+        "direction",
+        "trend",
+        "score",
+        "entry",
+        "takeProfit",
+        "stopLoss",
+        "buyTrigger",
+        "sellTrigger",
+        "triggerReason",
+        "support",
+        "resistance",
+        "reason",
+        "risk"
+      ]
+    };
+
+    const openaiResponse = await fetch(
+      "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini",
+          input: [
+            {
+              role: "system",
+              content: [
+                {
+                  type: "input_text",
+                  text: "あなたはFXチャート分析アシスタントです。画像からトレンド、現在価格、サポート、レジスタンスを分析し、必ずJSONで返してください。entry、takeProfit、stopLoss、buyWait、sellWait、riskRewardは必ず数値で返してください。不明、null、空欄は禁止です。見送り判定の場合でも条件成立時に使う参考値として必ず数値を設定してください。riskRewardは最低1.5以上になるようにentry、takeProfit、stopLossを設定してください。総合スコアが80点未満、または参考勝率が80%未満の場合は必ず見送り判定にしてください。買い優勢または売り優勢にするのは総合スコア80点以上かつ参考勝率80%以上の場合だけにしてください。"
+                }
+              ]
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: prompt
+                },
+                {
+                  type: "input_image",
+                  image_url: image
+                }
+              ]
+            }
+          ],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "fx_chart_analysis",
+              schema: schema,
+              strict: true
+            }
+          }
+        })
+      }
+    );
+
+    const result =
+      await openaiResponse.json();
+
+    if (!openaiResponse.ok) {
+      console.error(result);
+
+      return jsonResponse(500, {
+        error:
+          result.error?.message ||
+          "OpenAI API エラー"
+      });
+    }
+
+    const text =
+      extractOutputText(result);
+
+    if (!text) {
+      console.error(result);
+
+      return jsonResponse(500, {
+        error:
+          "AIの返答を読み取れませんでした。"
+      });
+    }
+
+    let analysis;
+
+    try {
+      const cleanText =
+        text
+          .replace(/```json|```/g, "")
+          .trim();
+
+      analysis =
+        JSON.parse(cleanText);
+
+    } catch (parseError) {
+      console.error(
+        "JSON parse error:",
+        parseError,
+        text
+      );
+
+      return jsonResponse(500, {
+        error:
+          "AIの返答JSONを解析できませんでした。"
+      });
+    }
+
+    return jsonResponse(200, {
+      success: true,
+      analysis
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return jsonResponse(500, {
+      error:
+        error.message ||
+        "サーバーエラー"
+    });
+  }
+};
+
+function extractOutputText(result) {
+  if (
+    typeof result.output_text === "string" &&
+    result.output_text.trim()
+  ) {
+    return result.output_text.trim();
+  }
+
+  if (Array.isArray(result.output)) {
+    for (const item of result.output) {
+      if (!Array.isArray(item.content)) {
+        continue;
+      }
+
+      for (const part of item.content) {
+        if (
+          typeof part.text === "string" &&
+          part.text.trim()
+        ) {
+          return part.text.trim();
+        }
+      }
+    }
+  }
+
+  return "";
+}
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers":
+      "Content-Type",
+    "Access-Control-Allow-Methods":
+      "POST, OPTIONS"
+  };
+}
+
+function jsonResponse(statusCode, data) {
+  return {
+    statusCode,
+    headers: {
+      ...corsHeaders(),
+      "Content-Type":
+        "application/json"
+    },
+    body:
+      JSON.stringify(data)
+  };
+}
