@@ -13,6 +13,7 @@ const {explainShadow, settleShadows, shadowSummary} = require("./shadow-tracker"
 const parallel = require("./parallel-strategies");
 const { audit: auditFeatures } = require("./feature-audit");
 const { notificationId } = require("./notification-id");
+const { getPushConfig } = require("./push-config");
 const { canStartSixHourTrade } = require("./weekend-guard");
 const { reopenCooldown, allowedToPush, recordPush } = require("./push-guard");
 async function loadImportantEvents() {
@@ -115,8 +116,10 @@ const {
         const pairsToCheck = pairs;
 
     const interval = "15min";
-    const targetScore = 70; // provisional 60-index starts at 70 score, not the old 90 threshold
+    const targetScore = 65; // Relaxed live score floor; provisional index is diagnostic only
     const results = [];
+    const pushConfig = getPushConfig();
+    console.log("FX push configuration:", JSON.stringify({configured:pushConfig.configured, targetCount:pushConfig.subscriptions.length, invalidCount:pushConfig.invalidCount, ready:pushConfig.ready, apiKeyPresent:Boolean(process.env.ONESIGNAL_API_KEY)}));
 
     const pairErrors = [];
     for (const [pairIndex, pair] of pairsToCheck.entries()) {
@@ -135,7 +138,7 @@ const {
     const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
     const data = await response.json();
 
-    if (!response.ok || data.status === "error") {
+    if (!response.ok || data.status === "error" || data.code && data.status !== "ok") {
       throw new Error(
         data.message ||
         "相場データの取得に失敗しました。"
@@ -224,7 +227,7 @@ const {
     // statistically calibrated probability before sufficient validation.
     const probabilityReady = probability.isValidated;
     const probabilityPassed = provisional.passes;
-    const signalEligible = candidateEligible && probabilityPassed; // Single notification eligibility gate; chart AI is independent, not an override.
+    const signalEligible = candidateEligible; // Provisional index is uncalibrated and must not veto otherwise eligible signals.
     const shadowDiagnostic = canStartSixHourTrade()
       ? explainShadow(tracker, pair, analysis, provisional, signalEligible, latest)
       : {recorded:false, reason:"marketSessionGuard"};
@@ -265,16 +268,14 @@ const actualWinRateText =
     const decisionAt = new Date().toISOString();
     let notificationSent = false;
     let notificationErrorText = null;
+    if (shouldNotify && !oneSignalKey) notificationErrorText = "OneSignal APIキー未設定";
+    else if (shouldNotify && !pushConfig.ready) notificationErrorText = "OneSignal送信先設定が無効";
     const skipReasons = [];
     if (!signalEligible) {
-      if (!probabilityPassed) skipReasons.push("暫定60%指数未満（" + provisional.estimatedScore + "）");
-      if (score < 70) skipReasons.push("スコア不足：" + score + "点");
+      if (score < 65) skipReasons.push("スコア不足：" + score + "点");
       if (direction === "見送り") skipReasons.push("売買方向が不明");
-      if (analysis.isRsiExtreme) skipReasons.push("RSI極端値");
-      if (analysis.isSharpMove) skipReasons.push("急変動");
       if (analysis.isRangeTooSmall) skipReasons.push("値幅不足");
       // ADX is a reference factor; not an automatic veto.
-      if (analysis.isCandleOpposed || analysis.candleSignal === "十字線") skipReasons.push("ローソク足条件未達");
       if (!(analysis.netRewardPips > 0 && riskReward >= 1.5)) skipReasons.push("コスト控除後の利益・RR不足");
 
       if (!skipReasons.length) skipReasons.push("その他の通知条件未達");
@@ -286,7 +287,8 @@ const actualWinRateText =
     if (importantEvent) skipReasons.push("重要経済指標の前後");
     if (!tradeStore) skipReasons.push("記録ストア利用不可");
     if (shouldNotify && !oneSignalKey) skipReasons.push("OneSignal APIキー未設定");
-    if (shouldNotify && !isDuplicate && oneSignalKey) {
+    if (shouldNotify && !pushConfig.ready) skipReasons.push("OneSignal送信先設定が無効");
+    if (shouldNotify && !isDuplicate && oneSignalKey && pushConfig.ready) {
       try {
 
         const notificationResponse = await fetch(
@@ -297,14 +299,12 @@ const actualWinRateText =
              "Content-Type": "application/json; charset=utf-8",
              "Authorization": "Key " + oneSignalKey,
            },
+           signal: AbortSignal.timeout(12000),
            body: JSON.stringify({
-              app_id: "1e68f659-0220-4409-a00d-fd9905b529db",
+              app_id: pushConfig.appId,
               idempotency_key: notificationId(STRATEGY_VERSION, pair, direction, latest.datetime),
               target_channel: "push",
-              include_subscription_ids: [
-  "f7a8344c-34f9-44f8-8bb5-03f97a2fd645",
-  "92a734ef-c592-4c77-b214-942cf28ce03a"
-],
+              include_subscription_ids: pushConfig.subscriptions,
              
               headings: {
                 en: "FX AI Tool 🚨"
@@ -346,8 +346,11 @@ const actualWinRateText =
           }
         );
 
-        const notificationResult =
-          await notificationResponse.json();
+        // OneSignal can return non-JSON errors (proxy or transient outage).
+        const notificationBody = await notificationResponse.text();
+        let notificationResult;
+        try { notificationResult = JSON.parse(notificationBody); }
+        catch { throw new Error("OneSignal returned non-JSON HTTP " + notificationResponse.status); }
         
         // HTTP 200 alone does not mean OneSignal accepted any recipients.
         const recipientCount = Number(notificationResult?.recipients);
@@ -405,6 +408,9 @@ const actualWinRateText =
       alreadyTracking,
       importantEvent,
       storeAvailable: Boolean(tradeStore),
+      pushTargetCount: pushConfig.subscriptions.length,
+      pushTargetConfigured: pushConfig.configured,
+      pushConfigValid: pushConfig.ready,
       stopWidthPips: Math.abs(entryPrice - stopLoss) / 0.01,
       rsi,
       isRsiExtreme,
@@ -440,7 +446,7 @@ const actualWinRateText =
         provisional,
         shadowRecorded, shadow,
         featureAudit: auditFeatures(tracker.shadowHistory, pair),
-        notificationMode: "暫定60%指数ルール（各通貨30件まで検証）",
+        notificationMode: "65点＋RR1.5ルール（暫定指数は参考・各通貨30件まで検証）",
         targetScore,
         strategyVersion: STRATEGY_VERSION,
         actualWinRate: actualWinRateText,
@@ -496,7 +502,10 @@ const actualWinRateText =
           candidateEligible, probabilityPassed, eligible: signalEligible,
           dataFresh: !stale, reopeningBlocked, quietHoursBlocked, pushGate, noOpenSignal: !alreadyTracking,
           noImportantEvent: !importantEvent, storageAvailable: !!tradeStore,
-          pushAttempted: shouldNotify && !isDuplicate, pushAccepted: notificationSent,
+          pushAttempted: shouldNotify && !isDuplicate && !!oneSignalKey && pushConfig.ready,
+          pushAccepted: notificationSent, pushTargetCount: pushConfig.subscriptions.length,
+          pushTargetConfigured: pushConfig.configured, pushConfigValid: pushConfig.ready,
+          pushApiKeyPresent: !!oneSignalKey,
           candleTime: latest.datetime, candleAgeSeconds, m5Status, m5Error, recordedAt: decisionAt
         },
 
@@ -556,10 +565,15 @@ const actualWinRateText =
 if (tradeStore) {
   for (const result of results) {
     const value = JSON.parse(result.body);
-    await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
-      ...value, checkedAt: new Date().toISOString()
-    });
-    await tradeStore.delete("market-error-" + value.pair.replace("/", "-"));
+    try {
+      await tradeStore.setJSON("market-" + value.pair.replace("/", "-"), {
+        ...value, checkedAt: new Date().toISOString()
+      });
+      await tradeStore.delete("market-error-" + value.pair.replace("/", "-"));
+    } catch (snapshotError) {
+      console.error("FX snapshot persistence failed:", value.pair, snapshotError);
+      pairErrors.push({pair:value.pair, error:"監視結果の保存に失敗しました"});
+    }
   }
 }
 const tradeSaved = await saveTracker(tradeStore, tracker);
