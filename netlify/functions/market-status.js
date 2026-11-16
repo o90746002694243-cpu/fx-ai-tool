@@ -1,5 +1,6 @@
 // Read-only status: opening the page never sends a new push or fetches market history.
 const { loadTracker, formatActualWinRate } = require("./trade-tracker");
+const { STRATEGY_VERSION } = require("./strategy");
 exports.handler = async event => {
   const headers = {"Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store"};
   const {store, tracker} = await loadTracker(event);
@@ -10,6 +11,7 @@ exports.handler = async event => {
     const errors = await Promise.all(pairs.map(pair => store.get("market-error-" + pair.replace("/", "-"), {type:"json"})));
     const current = results.filter(Boolean).map(result => ({
       ...result,
+      snapshotVersionMatches: result.strategyVersion === STRATEGY_VERSION,
       // Read the authoritative tracker, rather than a cached market snapshot.
       actualWinRate: formatActualWinRate(tracker, result.pair),
       pendingCount: tracker.openSignals.filter(s => s.pair === result.pair).length,
@@ -43,7 +45,7 @@ exports.handler = async event => {
       const stale = !Number.isFinite(timestamp) || Date.now()-timestamp>90*60*1000;
       return {pair, status:stale?"outdated":"ok", message:stale?"監視結果が90分以上更新されていません":"分析済み", checkedAt:item.checkedAt};
     });
-    return {statusCode:200,headers,body:JSON.stringify({ok:true,results:current,errors:latestErrors,monitoringHealth})};
+    return {statusCode:200,headers,body:JSON.stringify({ok:true,activeStrategyVersion:STRATEGY_VERSION,results:current,errors:latestErrors,monitoringHealth})};
   } catch(error) {
     return {statusCode:500,headers,body:JSON.stringify({ok:false,error:"監視状況の取得に失敗しました。"})};
   }
